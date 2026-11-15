@@ -239,6 +239,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           onChange={(e) => onChangeSyncDays(Number(e.target.value))}
           className="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-md text-slate-700 focus:border-blue-600 focus:outline-none"
         >
+          <option value={3}>Last 3 days</option>
           <option value={7}>Last 7 days</option>
           <option value={30}>Last 30 days</option>
           <option value={90}>Last 90 days</option>

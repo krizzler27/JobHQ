@@ -146,6 +146,7 @@ export const AutoSyncScheduleEditor: React.FC<AutoSyncScheduleEditorProps> = ({
             onChange={(e) => onChangeLookbackDays(Number(e.target.value))}
             className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-blue-600 focus:outline-none"
           >
+            <option value={1}>Last 24 hours</option>
             <option value={3}>Last 3 days</option>
             <option value={7}>Last 7 days</option>
             <option value={14}>Last 14 days</option>
