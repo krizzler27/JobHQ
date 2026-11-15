@@ -3,6 +3,7 @@ import {
   BarChart3,
   Briefcase,
   Calendar,
+  CalendarDays,
   Columns3,
   Inbox,
   LayoutDashboard,
@@ -20,6 +21,7 @@ export type NavTab =
   | 'overview'
   | 'stats'
   | 'applications'
+  | 'calendar'
   | 'interviews'
   | 'alerts'
   | 'scans'
@@ -29,6 +31,7 @@ export const NAV_ITEMS: { id: NavTab; label: string; icon: React.FC<{ className?
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'stats', label: 'Stats', icon: BarChart3 },
   { id: 'applications', label: 'Applications', icon: Columns3 },
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays },
   { id: 'interviews', label: 'Interviews', icon: Calendar },
   { id: 'alerts', label: 'Job Alerts', icon: Briefcase },
   { id: 'scans', label: 'Scanned Emails', icon: Inbox },

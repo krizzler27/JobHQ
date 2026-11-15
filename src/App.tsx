@@ -25,6 +25,7 @@ import { AppHeader, AppSidebar, NAV_ITEMS } from './components/AppNavigation';
 import type { NavTab } from './components/AppNavigation';
 import { BatchDeleteKeywordModal } from './components/BatchDeleteKeywordModal';
 import type { BatchDeleteCandidateItem } from './components/BatchDeleteKeywordModal';
+import { CalendarView } from './components/CalendarView';
 import { DuplicateGuardModal } from './components/DuplicateGuardModal';
 import type { DuplicateGuardCandidate } from './components/DuplicateGuardModal';
 import { EmailFilterModal } from './components/EmailFilterModal';
@@ -1020,6 +1021,16 @@ export default function App() {
                 />
               )}
             </div>
+          ) : activeTab === 'calendar' ? (
+            <CalendarView
+              applications={applications}
+              interviews={interviews}
+              onSelectApplication={setSelectedApp}
+              onUpdateInterviewStatus={handleUpdateInterviewStatus}
+              onDeleteInterview={handleDeleteInterview}
+              onAddInterview={() => setShowAddInterview(true)}
+              onAddApplication={() => setShowAddApp(true)}
+            />
           ) : activeTab === 'interviews' ? (
             <InterviewsView
               interviews={interviews}
