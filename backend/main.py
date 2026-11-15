@@ -34,11 +34,7 @@ def create_app(context: AppContext | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         app_ctx.db.init_schema()
-        app_ctx.auto_sync_scheduler.start()
-        try:
-            yield
-        finally:
-            app_ctx.auto_sync_scheduler.stop()
+        yield
 
     application = FastAPI(title="Job Tracker API", lifespan=lifespan)
     if context is not None:

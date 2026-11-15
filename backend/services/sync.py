@@ -482,12 +482,9 @@ class ImapSyncService:
             stats["processed_new"] += 1
 
 
-# Re-exported for backwards compatibility
 from backend.services.sync_job import SyncJobManager
-from backend.services.cron_scheduler import AutoSyncScheduler
 
 __all__ = [
     "ImapSyncService",
     "SyncJobManager",
-    "AutoSyncScheduler",
 ]

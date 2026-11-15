@@ -7,7 +7,6 @@ from backend.services.email_filter_context import EmailFilterContextService
 from backend.services.stats import StatsQueryService
 from backend.services.sync import ImapSyncService
 from backend.services.sync_job import SyncJobManager
-from backend.services.cron_scheduler import AutoSyncScheduler
 
 __all__ = [
     "DashboardQueryService",
@@ -17,5 +16,4 @@ __all__ = [
     "rescore_all_alerts",
     "ImapSyncService",
     "SyncJobManager",
-    "AutoSyncScheduler",
 ]

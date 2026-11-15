@@ -79,7 +79,7 @@ Before downloading full message bodies, IMAP searches headers using:
 **Tip:** Whenever non-job mail slips into Applications, Interviews, or Job Alerts, use **Filter Non-Career Email** directly on that item to add its sender, domain, or subject words to **Skip / Noise Words** and optionally delete the item. After changing keywords, click **Force Re-scan** in the **Scanned Emails** tab to re-evaluate recent messages.
 
 ### Auto-Sync Schedule (Unix Cron)
-Enable **Auto-Sync** in **Settings** using either quick templates (`Every 30 min`, `Every 4 hours`, `Daily 9 AM`, `Weekdays 9–6 (2h)`) or any 5-field Unix cron expression (`minute hour day month weekday`). Auto-sync runs automatically whenever `npm run dev` / `npm start` is active.
+Enable **Auto-Sync** in **Settings** using either quick templates (`Every 30 min`, `Every 4 hours`, `Daily 9 AM`, `Weekdays 9–6 (2h)`) or any 5-field Unix cron expression (`minute hour day month weekday`). Auto-sync is evaluated continuously by the background worker daemon (`python -m backend.workers`) whenever `npm run dev` / `npm start` is active. For details on how workers run or how to add custom background tasks, see [Background Worker System (`docs/WORKERS.md`)](WORKERS.md).
 
 ---
 
@@ -102,10 +102,12 @@ Enable **Auto-Sync** in **Settings** using either quick templates (`Every 30 min
 
 | Task | Command | Notes |
 | :--- | :--- | :--- |
-| Start dev server | `npm run dev` | Starts FastAPI (`:3001`) + Express/Vite (`:3000`). |
+| Start dev server | `npm run dev` | Spawns FastAPI (`:3001`), Worker Daemon, and Express/Vite (`:3000`). |
 | TypeScript check | `npm run lint` | Runs `tsc --noEmit`. |
+| Run frontend tests | `npm test` | Runs Vitest test suites. |
 | Production build | `npm run build` | Builds frontend assets to `dist/`. |
-| Start production build | `npm start` | Serves `dist/` via Express + FastAPI backend. |
+| Start production build | `npm start` | Serves `dist/` via Express + FastAPI + Worker Daemon. |
+| Run standalone worker | `.venv/bin/python -m backend.workers` | Runs background worker loop directly in CLI. |
 | Backend unit tests | `.venv/bin/python -m unittest discover -s backend/tests -v` | Runs isolated `:memory:` tests cleanly. |
 
 ### Safe Backend Testing (Without Touching `data/job_tracker.db`)

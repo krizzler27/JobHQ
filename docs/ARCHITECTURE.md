@@ -7,55 +7,58 @@ Job Tracker is a **local-first single-user web application** composed of a Node/
 ## 1. Runtime & Process Topology
 
 ```text
-+-------------------------------------------------------------------+
-| Browser (React 19 + Vite + Tailwind CSS v4)                       |
-| http://localhost:3000                                             |
-+---------------------------------+---------------------------------+
-                                  | HTTP /api/* & static assets
-                                  v
-+-------------------------------------------------------------------+
-| Node / Express Host (server.ts) — 127.0.0.1:3000                  |
-| - Spawns & supervises Python backend child process                |
-| - Dev: mounts Vite middleware (appType: 'spa')                    |
-| - Prod: serves built ./dist static files                          |
-| - Proxies all /api/* requests -> http://127.0.0.1:3001            |
-+---------------------------------+---------------------------------+
-                                  | HTTP JSON / Binary (127.0.0.1:3001)
-                                  v
-+-------------------------------------------------------------------+
-| Python FastAPI + Uvicorn (`python -m backend`) — 127.0.0.1:3001  |
-|                                                                   |
-|  +-----------------------+     +-------------------------------+  |
-|  | FastAPI Routes        |     | Background Daemon Threads     |  |
-|  | - CRUD & Bulk Ops     |     | - SyncJobManager (IMAP sync)  |  |
-|  | - StatsQueryService   |     | - AutoSyncScheduler (Cron)    |  |
-|  | - BackupRestoreService|     | - ModelDownloadManager (GGUF) |  |
-|  +-----------+-----------+     +---------------+---------------+  |
-|              |                                 |                  |
-|              +----------------+----------------+                  |
-|                               |                                   |
-|                               v                                   |
-|              +---------------------------------+                  |
-|              | Repositories & Services         |                  |
-|              | (SQLAlchemy 2.0 ORM)            |                  |
-|              +--------+---------------+--------+                  |
-|                       |               |                           |
-+-----------------------+---------------+---------------------------+
-                        |               |
-        +---------------+---+       +---+--------------------+
-        v                   |       |                        v
-+-------------------+       |   +---+---+          +-------------------+
-| SQLite Database   |       |   | IMAP  |          | Local GGUF Models |
-| data/job_tracker.db       |   | (SSL) |          | ./models/*.gguf   |
-| + data/.secret.key|       |   | :993  |          | (llama-cpp-python)|
-+-------------------+       |   +-------+          +-------------------+
++-------------------------------------------------------------------------------+
+| Browser (React 19 + Vite + Tailwind CSS v4)                                   |
+| http://localhost:3000                                                         |
++---------------------------------------+---------------------------------------+
+                                        | HTTP /api/* & static assets
+                                        v
++-------------------------------------------------------------------------------+
+| Node / Express Host (server.ts) — 127.0.0.1:3000                              |
+| - Spawns & supervises two independent Python child processes                  |
+| - Dev: mounts Vite middleware (appType: 'spa')                                |
+| - Prod: serves built ./dist static files                                      |
+| - Proxies all /api/* requests -> http://127.0.0.1:3001                        |
++--------------------+------------------------------------+---------------------+
+                     |                                    |
+         Spawns & supervises                  Spawns & supervises
+                     |                                    |
+                     v                                    v
++------------------------------------+  +------------------------------------+
+|  Python Web API (`-m backend`)     |  | Python Worker Daemon (`-m workers`)|
+|  FastAPI + Uvicorn (Port 3001)     |  | Background Worker Process          |
+|  - REST endpoints & request router |  | - WorkerRunner tick loop (15s)     |
+|  - SyncJobManager manual sync runs |  | - EmailJobSyncWorker (cron auto)   |
+|  - Zero background cron execution  |  | - Isolated per-worker threads      |
++-----------------+------------------+  +------------------+-----------------+
+                  |                                        |
+                  +--------------------+-------------------+
+                                       |
+                   Concurrent SQLite Access (WAL Mode)
+                                       v
+                     +-----------------------------------+
+                     |        SQLite Database            |
+                     |      data/job_tracker.db          |
+                     |  - PRAGMA journal_mode=WAL        |
+                     |  - PRAGMA busy_timeout=15000      |
+                     +-----------------+-----------------+
+                                       |
+                       +---------------+---------------+
+                       |                               |
+                       v                               v
+             +-------------------+           +-------------------+
+             |    IMAP Server    |           | Local GGUF Models |
+             |   (SSL/TLS :993)  |           |  ./models/*.gguf  |
+             +-------------------+           +-------------------+
 ```
 
 ### Lifecycle & Process Management (`server.ts`)
-1. On `npm run dev` (or `npm start`), `server.ts` resolves the workspace Python binary (`.venv/bin/python` on Unix, `.venv\Scripts\python.exe` on Windows, or system fallback) and spawns `python -m backend` (`backend/main.py`).
-2. Express polls `http://127.0.0.1:3001/api/health` before opening port `3000`.
-3. All `/api/*` requests are forwarded verbatim (with body up to `2 MB`) to FastAPI.
-4. `SIGINT`, `SIGTERM`, `SIGBREAK`, and Node `exit` hooks terminate the child Python process cleanly (using `taskkill /t /f` on Windows) before closing Vite/HTTP servers.
+1. On `npm run dev` (or `npm start`), `server.ts` resolves the workspace Python binary (`.venv/bin/python` on Unix, `.venv\Scripts\python.exe` on Windows, or system fallback).
+2. `server.ts` spawns `python -m backend` (`backend/main.py`) on port `3001` and polls `http://127.0.0.1:3001/api/health` before starting Express on port `3000`.
+3. Once the Web API is healthy, `server.ts` spawns `python -m backend.workers` (`backend/workers/__main__.py`) as an independent child process running the background worker daemon.
+4. If the worker process crashes unexpectedly, `server.ts` automatically restarts it (up to 5 attempts with backoff).
+5. All `/api/*` requests are forwarded verbatim (with body up to `2 MB`) to FastAPI.
+6. `SIGINT`, `SIGTERM`, `SIGBREAK`, and Node `exit` hooks terminate both Python child processes cleanly (using `taskkill /t /f` on Windows or `SIGTERM` on Unix) before closing Vite/HTTP servers.
 
 ---
 
@@ -65,14 +68,15 @@ The backend follows a clean **layered package structure**:
 
 | Package / Entrypoint | Responsibility |
 | :--- | :--- |
-| `backend/__main__.py` & `backend/main.py` | FastAPI app factory (`create_app`), `lifespan` hook (`db.init_schema()` + `auto_sync_scheduler.start()/stop()`), exception normalization, and Uvicorn runner (`127.0.0.1:3001`). |
+| `backend/__main__.py` & `backend/main.py` | FastAPI app factory (`create_app`), `lifespan` hook (`db.init_schema()`), exception normalization, and Uvicorn runner (`127.0.0.1:3001`). Dedicated to API request serving. |
+| `backend/workers/` | Multi-process background worker daemon (`python -m backend.workers`). See [WORKERS.md](WORKERS.md). Includes `core/base.py` (`BaseWorker`), `core/runner.py` (`WorkerRunner`), and `email_job_sync.py` (`EmailJobSyncWorker`). |
 | `backend/api/` | `deps.py` (`AppContext`, `get_db`, `get_app_context`), domain `schemas/` (Pydantic v2 payloads), and domain `routers/` (`health`, `dashboard`, `applications`, `interviews`, `alerts`, `imap`, `profile`, `emails`, `backup`, `llm`). |
 | `backend/core/` | Shared infrastructure: `constants.py`, 5-field `cron.py`, Fernet `crypto.py` (`SecretCipher`), `normalizers.py`, SQLAlchemy ORM `models.py`, and `database.py` (`DatabaseManager`). |
 | `backend/repositories/` | Entity-scoped data access: `base.py`, `applications.py` (with Duplicate Guard & 10-day auto-ghosting), `interviews.py`, `alerts.py`, `profile.py`, `imap_config.py`, and `processed_emails.py`. |
 | `backend/parsing/` | Deterministic email intelligence: `html_links.py` (HTML extraction & URL noise filtering), `classifier.py`, `extractors.py`, and `scorer.py` (relevance scoring `0–100`). |
 | `backend/imap/` | `queries.py` (batched OR-tree IMAP search builder & folder/MIME header decoding) and `client.py` (`ImapClient` over SSL/TLS with `SyncCancelledError`). |
 | `backend/llm/` | Optional local SLM layer: `prompts.py` (GGUF catalog & prompt builder), `downloader.py` (`ModelDownloadManager`), and `runtime.py` (`LlamaCppPythonAdapter`, CPU thread sizing, RAM unload). |
-| `backend/services/` | Multi-entity orchestration & read models: `dashboard.py`, `stats.py`, `sync.py` (`ImapSyncService`, `SyncJobManager`, `AutoSyncScheduler`), `backup.py`, `email_filter_context.py`, and `alert_scoring.py`. |
+| `backend/services/` | Multi-entity orchestration & read models: `dashboard.py`, `stats.py`, `sync.py` (`ImapSyncService`, `SyncJobManager`), `backup.py`, `email_filter_context.py`, and `alert_scoring.py`. |
 | `backend/cli/decrypt_password.py` | Offline CLI utility (`python -m backend.cli.decrypt_password`) to decrypt `imap_configs.password` locally using `data/.secret.key` or `JOB_TRACKER_KEY`. |
 
 ---
@@ -115,7 +119,7 @@ All persistence uses SQLite with `PRAGMA foreign_keys=ON`. Schema updates are ap
    - `backend/parsing/` extracts plain text, HTML anchors, cleaned job URLs (stripping tracking/unsubscribe links), interview links, company, role, and stage updates.
    - When `llm_backend == "llama_cpp_python"`, ambiguous/incomplete emails invoke the local GGUF engine (`backend/llm/runtime.py`) with rule-based fallback if no model is loaded.
    - When sync finishes or is cancelled, the adapter immediately unloads model weights from RAM.
-4. **Auto-Sync Scheduler (`AutoSyncScheduler`)**: Background thread polls every 30 seconds; when `auto_sync_enabled=1` and the cron slot since `last_check` matches `next_cron_run()`, triggers `SyncJobManager.start_sync(days=profile.auto_sync_days)`.
+4. **Background Auto-Sync (`EmailJobSyncWorker`)**: Evaluated by the separate worker daemon (`python -m backend.workers`). When `auto_sync_enabled=1` and the cron slot matches `next_cron_run()`, the worker daemon triggers `SyncJobManager.start_sync(days=profile.auto_sync_days)` in an isolated worker thread. See [§ 4.7](#47-background-worker-system-backendworkers) and [WORKERS.md](WORKERS.md).
 
 ### 4.2 Built-in Parser & Local AI Hybrid Pipeline (`backend/parsing/` + `backend/llm/`)
 
@@ -193,6 +197,13 @@ Aggregates metrics for a chosen lookback window (`3d`, `7d`, `15d`, `30d`, `90d`
 - **JSON Export (`GET /api/backup/export`)**: Portable format (`job-tracker-backup` v1) containing `applications`, `interviews`, `job_alerts`, and `profile_settings`—intentionally excluding `imap_configs` passwords/secrets.
 - **JSON Import (`POST /api/backup/import`)**: Supports `merge` (deduplicates via `thread_id`, normalized company+role, `source_message_id`, and interview/alert signatures while remapping `application_id` foreign keys) and `replace` (clears tracked tables inside the transaction while leaving `imap_configs` intact).
 - **SQLite Snapshot (`GET /api/backup/sqlite`)**: Uses Python `sqlite3.Connection.backup()` to stream an atomic hot snapshot `.db` file via a temporary file cleaned up by Starlette `BackgroundTask`.
+
+### 4.7 Background Worker System (`backend/workers/`)
+A dedicated multi-process background execution subsystem runs as an independent OS process (`python -m backend.workers`) supervised by `server.ts`. For in-depth developer documentation, refer to [Background Worker System (`docs/WORKERS.md`)](WORKERS.md).
+- **Process Isolation**: The worker daemon runs in its own Python interpreter separate from FastAPI, eliminating GIL competition, preventing memory leak propagation, and allowing zero-downtime restarts.
+- **Generic Core Engine (`core/base.py`, `core/runner.py`)**: `WorkerRunner` is 100% domain-agnostic. Workers implement `BaseWorker` (`name`, `is_enabled()`, `get_cron()`, `execute(*args, **kwargs)`) and use constructor dependency injection.
+- **Fault Tolerance**: Worker execution is wrapped in individual daemon threads with complete exception boundaries. If a worker fails during `is_enabled`, `get_cron`, or `execute`, the runner logs the stack trace, records failure telemetry (`last_status="failed"`), and continues executing all remaining workers.
+- **SQLite WAL Concurrency**: Background workers read and write to `data/job_tracker.db` simultaneously with the Web API via `PRAGMA journal_mode=WAL` and `PRAGMA busy_timeout=15000`.
 
 ---
 

@@ -10,13 +10,15 @@ A private, local-first personal job application tracker. Connect any email inbox
 - **Job Search Stats (`Stats`)**: Time-windowed analytics (`3d`, `7d`, `15d`, `30d`, `90d`, `All time`) covering Reply Rate & average response days, Interview & Offer rates, clickable **Applications by Stage**, interactive **Applications per Day / Week** chart, **Job Alert Review Stats**, and paginated **Results by Job Board & Source** (`5 / 10 / 25` per page).
 - **Applications Pipeline (`Kanban` + `Table`)**: Track applications across 5 stages (`Applied`, `Interviewing`, `Offer`, `Rejected`, `Ghosted`), auto-move `Applied` entries unchanged for 10+ days to `Ghosted`, store clickable **Job / Portal Links** (`job_url`), sort/group by stage/source/company, export CSV, and run bulk stage moves or deletes.
 - **Duplicate Guard**: Checks normalized job links and company/role names before adding a manual application or promoting a job alert, offering **Update Existing** (merge details & notes) or **Add Anyway**.
-- **Interview Schedule (`Interviews`)**: Extracts rounds, dates, timezones, interviewers, job links, and meeting URLs (`Zoom`, `Google Meet`, `Microsoft Teams`, `Calendly`), with Upcoming / Past & Cancelled tabs, CSV export, and bulk selection delete.
+- **Interview Schedule & Interactive Calendar (`Interviews` & `Calendar`)**:
+  - **Interviews List**: Extracts rounds, dates, timezones, interviewers, job links, and meeting URLs (`Zoom`, `Google Meet`, `Microsoft Teams`, `Calendly`), with Upcoming / Past & Cancelled tabs, CSV export, and bulk selection delete.
+  - **Calendar View**: Apple & Google Calendar design patterns with Month, Week, and Agenda modes, Monday or Sunday week-start toggle, stage filter pills, and a slide-over Day Inspector for high-density dates.
 - **Job Alert Matching (`Job Alerts`)**: Parses job digests (LinkedIn, Indeed, Wellfound, Glassdoor, ZipRecruiter, Otta, Greenhouse, Lever, etc.), scores titles against your target roles/skills, supports sorting/grouping/pagination in row view, and includes a `⋮` menu to move misclassified emails to **Applications** or **Upcoming Interviews**.
 - **Batch Delete by Title or Keyword**: Available across **Applications**, **Interviews**, and **Job Alerts** with comma-separated keyword matching, field scope toggles (`Title / Role`, `Company`, `Source / Subject`), optional current-filter scoping, and a live preview before deleting.
 - **One-Click Non-Career Email Filtering**: Open **Filter Non-Career Email** from any Application drawer, Interview row, or Job Alert `⋮` menu to inspect the source email's sender/subject, block sender/domain/topic keywords into **Skip / Noise Words**, prune overly broad allowed keywords, and optionally delete the item in one step.
-- **Automatic IMAP Sync + Unix Cron Auto-Sync**:
+- **Automatic IMAP Sync + Background Worker Daemon**:
   - Scans multiple folders/labels (e.g., `INBOX, Careers, Job Alerts`) with provider-safe OR-tree header queries (`SINCE`, `SUBJECT`, `FROM`), skipping noise and already-seen `Message-ID`s before downloading bodies.
-  - Background **Auto-Sync Scheduler** runs inside the Python backend using standard 5-field Unix cron expressions while the server is running.
+  - Multi-process background **Worker Daemon** (`python -m backend.workers`) runs as an isolated OS process supervised by `server.ts`, evaluating 5-field Unix cron schedules without blocking the Web API.
 - **Built-in Reader + Optional Local AI (`llama-cpp-python`)**: Fast deterministic rules handle structured emails immediately; optionally download a quantized `.gguf` model (`Qwen 2.5 3B`, `Llama 3.2 3B`, `Gemma 3 4B`, `Qwen 2.5 1.5B`) for ambiguous recruiter threads, auto-unloaded from RAM when sync finishes.
 - **Local Encrypted Storage & Backups**: Persists everything in `data/job_tracker.db` (SQLite + SQLAlchemy). IMAP App Passwords are encrypted at rest with Fernet (`cryptography`). Export secret-free portable `.json` backups (with **Merge** or **Replace** restore) or download a consistent SQLite `.db` snapshot.
 
@@ -79,7 +81,8 @@ npm start
 
 Detailed technical and operational docs live in the [`docs/`](docs/) directory:
 
-- **[System Architecture (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md)** — Process topology, backend/frontend module design, SQLite schema, two-stage IMAP sync pipeline, hybrid parser/SLM flow, Unix cron scheduler, duplicate guard, and security model.
+- **[System Architecture (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md)** — Process topology, backend/frontend module design, SQLite schema, two-stage IMAP sync pipeline, hybrid parser/SLM flow, duplicate guard, and security model.
+- **[Background Worker System (`docs/WORKERS.md`)](docs/WORKERS.md)** — Multi-process supervisor architecture, `WorkerRunner`, `BaseWorker` contract, cron engine, error isolation, and how to add new background jobs.
 - **[API Reference (`docs/API_REFERENCE.md`)](docs/API_REFERENCE.md)** — Complete REST endpoint reference for dashboard, stats, applications, interviews, job alerts, IMAP sync, email filtering, profile/cron, local AI, and backups.
 - **[Setup & Development Guide (`docs/SETUP_AND_DEVELOPMENT.md`)](docs/SETUP_AND_DEVELOPMENT.md)** — Installation, Gmail/Outlook/Yahoo App Passwords, scan filter tuning, `backend.cli.decrypt_password` recovery CLI, and safe testing commands.
 
@@ -91,6 +94,10 @@ Detailed technical and operational docs live in the [`docs/`](docs/) directory:
 ├── backend/
 │   ├── __main__.py               # Module runner (`python -m backend`)
 │   ├── main.py                   # FastAPI factory, lifespan hooks & Uvicorn entrypoint
+│   ├── workers/                  # Standalone background worker daemon (`python -m backend.workers`)
+│   │   ├── __main__.py           # Worker process entrypoint
+│   │   ├── core/                 # Generic worker engine (BaseWorker, WorkerRunner)
+│   │   └── email_job_sync.py     # EmailJobSyncWorker (cron-driven IMAP synchronization)
 │   ├── api/
 │   │   ├── deps.py               # AppContext & FastAPI session/context dependencies
 │   │   ├── schemas/              # Pydantic request payloads (applications, interviews, alerts, imap, profile, backup, llm)
@@ -100,11 +107,12 @@ Detailed technical and operational docs live in the [`docs/`](docs/) directory:
 │   ├── parsing/                  # HTML/link extraction, email classifier, field extractors & alert relevance scorer
 │   ├── imap/                     # Batched IMAP search query builder & multi-folder SSL/TLS ImapClient
 │   ├── llm/                      # Recommended GGUF catalog, downloader & llama-cpp-python runtime adapter
-│   ├── services/                 # Dashboard, Stats, Sync/AutoSyncScheduler, Backup/Restore, EmailFilterContext & rescoring
+│   ├── services/                 # Dashboard, Stats, Sync/SyncJobManager, Backup/Restore, EmailFilterContext & rescoring
 │   ├── cli/decrypt_password.py   # Standalone CLI tool (`python -m backend.cli.decrypt_password`)
 │   └── tests/                    # Automated unit tests (`python -m unittest discover -s backend/tests`)
 ├── docs/
 │   ├── ARCHITECTURE.md         # System & data architecture documentation
+│   ├── WORKERS.md              # Background worker daemon & cron documentation
 │   ├── API_REFERENCE.md        # Backend REST API specification
 │   └── SETUP_AND_DEVELOPMENT.md# Installation, configuration & contributor guide
 ├── src/
@@ -112,7 +120,9 @@ Detailed technical and operational docs live in the [`docs/`](docs/) directory:
 │   ├── api.ts                  # Typed frontend REST client
 │   ├── types.ts                # Shared TypeScript interfaces
 │   ├── utils/appHelpers.ts     # Date formatting, stale checks, CSV download & cron labels
+│   ├── utils/calendarHelpers.ts# Dynamic month/week grid, timezone handling & event grouping
 │   └── components/
+│       ├── CalendarView.tsx            # Apple & Google inspired Month/Week/Agenda calendar view
 │       ├── StatsView.tsx               # Pipeline & job board analytics view
 │       ├── PipelineActivityCards.tsx   # Shared stage breakdown & daily/weekly pace chart cards
 │       ├── KanbanBoard.tsx             # 5-stage drag-and-drop Kanban board

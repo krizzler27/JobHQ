@@ -10,29 +10,42 @@ const PY_PORT = 3001;
 const PY_BASE = `http://127.0.0.1:${PY_PORT}`;
 
 let pythonChild: ChildProcess | null = null;
+let workerChild: ChildProcess | null = null;
 let isShuttingDown = false;
 
 function resolvePythonExecutable(): string {
-  const candidates =
-    process.platform === 'win32'
-      ? [path.resolve(process.cwd(), '.venv', 'Scripts', 'python.exe'), 'python']
-      : [path.resolve(process.cwd(), '.venv', 'bin', 'python'), 'python3', 'python'];
-  for (const candidate of candidates) {
-    if (candidate === 'python' || candidate === 'python3' || fs.existsSync(candidate)) {
-      return candidate;
-    }
+  const isWin = process.platform === 'win32';
+  const venvPython = isWin
+    ? path.resolve(process.cwd(), '.venv', 'Scripts', 'python.exe')
+    : path.resolve(process.cwd(), '.venv', 'bin', 'python');
+
+  if (fs.existsSync(venvPython)) {
+    return venvPython;
   }
-  return 'python3';
+
+  // Preflight alert if virtualenv is not yet initialized
+  const setupScript = isWin ? 'install.bat' : './install.sh';
+  console.warn(
+    `[supervisor] Warning: Python virtualenv not found at ${venvPython}. Run ${setupScript} or 'uv sync' to initialize.`,
+  );
+
+  return isWin ? 'python' : 'python3';
 }
 
-function stopPythonBackend() {
-  if (!pythonChild || pythonChild.killed || !pythonChild.pid) return;
+function stopProcess(child: ChildProcess | null) {
+  if (!child || child.killed || !child.pid) return;
   if (process.platform === 'win32') {
-    execFile('taskkill', ['/pid', String(pythonChild.pid), '/t', '/f'], () => {});
+    execFile('taskkill', ['/pid', String(child.pid), '/t', '/f'], () => {});
   } else {
-    pythonChild.kill('SIGTERM');
+    child.kill('SIGTERM');
   }
+}
+
+function stopPythonProcesses() {
+  stopProcess(pythonChild);
+  stopProcess(workerChild);
   pythonChild = null;
+  workerChild = null;
 }
 
 function startPythonBackend() {
@@ -65,6 +78,35 @@ function startPythonBackend() {
   return child;
 }
 
+function startPythonWorker() {
+  const pythonBin = resolvePythonExecutable();
+  const child = spawn(pythonBin, ['-m', 'backend.workers'], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      PYTHONUNBUFFERED: '1',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  workerChild = child;
+
+  child.stdout?.on('data', (chunk) => {
+    process.stdout.write(chunk);
+  });
+  child.stderr?.on('data', (chunk) => {
+    process.stderr.write(chunk);
+  });
+
+  child.on('exit', (code) => {
+    workerChild = null;
+    if (!isShuttingDown && code !== 0 && code !== null) {
+      console.error(`[worker] Background worker exited unexpectedly with code ${code}`);
+    }
+  });
+
+  return child;
+}
+
 async function waitForPythonReady(retries = 30): Promise<void> {
   for (let i = 0; i < retries; i++) {
     try {
@@ -75,7 +117,7 @@ async function waitForPythonReady(retries = 30): Promise<void> {
     }
     await new Promise((r) => setTimeout(r, 150));
   }
-  stopPythonBackend();
+  stopPythonProcesses();
   throw new Error('Python backend failed to become ready on port 3001');
 }
 
@@ -102,6 +144,7 @@ function isAllowedHost(host: string | undefined): boolean {
 async function startServer() {
   startPythonBackend();
   await waitForPythonReady();
+  startPythonWorker();
 
   const app = express();
 
@@ -174,7 +217,7 @@ async function startServer() {
   const gracefulShutdown = () => {
     if (isShuttingDown) return;
     isShuttingDown = true;
-    stopPythonBackend();
+    stopPythonProcesses();
     httpServer.close(() => {
       if (vite) {
         vite.close().finally(() => process.exit(0));
@@ -188,11 +231,11 @@ async function startServer() {
   process.on('SIGINT', gracefulShutdown);
   process.on('SIGTERM', gracefulShutdown);
   process.on('SIGBREAK' as NodeJS.Signals, gracefulShutdown);
-  process.on('exit', stopPythonBackend);
+  process.on('exit', stopPythonProcesses);
 }
 
 startServer().catch((err) => {
   console.error('Failed to start server:', err);
-  stopPythonBackend();
+  stopPythonProcesses();
   process.exit(1);
 });
