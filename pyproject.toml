@@ -1,0 +1,20 @@
+[project]
+name = "job-tracker"
+version = "1.0.0"
+description = "Lightweight local IMAP job application tracker with FastAPI, SQLAlchemy, and optional local AI parsing"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "sqlalchemy>=2.0.0",
+    "llama-cpp-python>=0.3.16",
+    "cryptography>=43.0.0",
+]
+
+[[tool.uv.index]]
+name = "llama-cpp-cpu"
+url = "https://abetlen.github.io/llama-cpp-python/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+llama-cpp-python = { index = "llama-cpp-cpu" }
