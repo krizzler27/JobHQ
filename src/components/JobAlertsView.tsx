@@ -50,9 +50,9 @@ const STATUS_ORDER: Record<JobAlertStatus, number> = {
 };
 
 const STATUS_META: Record<JobAlertStatus, { label: string; tone: string }> = {
-  suggested: { label: 'Suggested', tone: 'text-blue-700 dark:text-blue-400' },
+  suggested: { label: 'Suggested', tone: 'text-[#234aff] dark:text-blue-400' },
   applied: { label: 'Applied', tone: 'text-emerald-700 dark:text-emerald-400' },
-  dismissed: { label: 'Dismissed', tone: 'text-slate-500 dark:text-slate-400' },
+  dismissed: { label: 'Dismissed', tone: 'text-stone-500 dark:text-slate-400' },
 };
 
 function getMatchTier(score: number): { key: string; label: string; tone: string; order: number } {
@@ -60,9 +60,9 @@ function getMatchTier(score: number): { key: string; label: string; tone: string
     return { key: 'strong', label: 'Strong Match (70%+)', tone: 'text-emerald-700 dark:text-emerald-400', order: 0 };
   }
   if (score >= 40) {
-    return { key: 'good', label: 'Good Match (40–69%)', tone: 'text-blue-700 dark:text-blue-400', order: 1 };
+    return { key: 'good', label: 'Good Match (40–69%)', tone: 'text-[#234aff] dark:text-blue-400', order: 1 };
   }
-  return { key: 'low', label: 'Low Match (<40%)', tone: 'text-slate-500 dark:text-slate-400', order: 2 };
+  return { key: 'low', label: 'Low Match (<40%)', tone: 'text-stone-500 dark:text-slate-400', order: 2 };
 }
 
 export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
@@ -279,7 +279,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
     <div className="space-y-4">
       {/* Primary Filters */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex items-center gap-0.5 p-1 bg-slate-100 dark:bg-slate-900/80 rounded-lg border border-slate-200/60 dark:border-slate-800 text-xs font-semibold">
+        <div className="inline-flex items-center gap-0.5 p-0.5 bg-[#eeece6]/60 dark:bg-slate-900/80 rounded-lg border border-[#e5e3dc] dark:border-slate-800 text-xs font-semibold">
           {(['suggested', 'applied', 'dismissed', 'all'] as const).map((tab) => (
             <button
               key={tab}
@@ -287,8 +287,8 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
               onClick={() => setStatusFilter(tab)}
               className={`px-3 py-1.5 rounded-md capitalize transition-colors whitespace-nowrap shrink-0 ${
                 statusFilter === tab
-                  ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-2xs font-semibold'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                  ? 'bg-white dark:bg-[#1c2436] text-stone-900 dark:text-white shadow-2xs font-semibold'
+                  : 'text-stone-500 dark:text-slate-400 hover:text-stone-800 dark:hover:text-slate-200'
               }`}
             >
               {tab}
@@ -298,20 +298,20 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-stone-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Filter job titles..."
-              className="pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 w-48 focus:border-blue-600 focus:outline-none shadow-2xs"
+              className="pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 rounded-lg text-stone-800 dark:text-slate-200 w-48 focus:border-[#234aff] focus:ring-1 focus:ring-[#234aff] focus:outline-none shadow-2xs"
             />
           </div>
 
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
-            className="px-2.5 py-1.5 text-xs bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 focus:border-blue-600 focus:outline-none shadow-2xs"
+            className="px-2.5 py-1.5 text-xs bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 rounded-lg text-stone-700 dark:text-slate-300 focus:border-[#234aff] focus:outline-none shadow-2xs"
           >
             <option value="all">All Source Apps</option>
             {sources.map((src) => (
@@ -326,8 +326,8 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
             onClick={() => setRelevantOnly((v) => !v)}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors whitespace-nowrap shrink-0 shadow-2xs ${
               relevantOnly
-                ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300'
-                : 'bg-white dark:bg-[#182030] border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                ? 'bg-[#234aff]/10 dark:bg-blue-950/40 border-[#234aff]/25 dark:border-blue-900/60 text-[#234aff] dark:text-blue-300'
+                : 'bg-white dark:bg-[#182030] border-[#e5e3dc] dark:border-slate-700 text-stone-700 dark:text-slate-300 hover:bg-[#eeece6]/40 dark:hover:bg-slate-800'
             }`}
           >
             {relevantOnly ? 'Relevant Only (>=40%)' : 'Showing All Titles'}
@@ -337,7 +337,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
             type="button"
             onClick={handleRescore}
             disabled={rescoring}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 disabled:opacity-60 shadow-2xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-[#eeece6]/40 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 disabled:opacity-60 shadow-2xs transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${rescoring ? 'animate-spin' : ''}`} />
             Re-score
@@ -376,7 +376,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
                   setBulkBusy(false);
                 }
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 disabled:opacity-60 shadow-2xs transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-[#eeece6]/40 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 disabled:opacity-60 shadow-2xs transition-colors"
             >
               <X className="w-3.5 h-3.5" />
               Dismiss &lt;40% ({lowScoreCount})
@@ -386,15 +386,15 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
       </div>
 
       {/* Sorting, Grouping & Selection Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#131926] px-3.5 py-2.5 shadow-2xs">
+      <div className="studio-card flex flex-wrap items-center justify-between gap-2 rounded-xl px-3.5 py-2.5 shadow-2xs">
         <div className="flex flex-wrap items-center gap-2.5 text-xs">
-          <label className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-400 font-medium">
-            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+          <label className="inline-flex items-center gap-1.5 text-stone-600 dark:text-slate-400 font-medium">
+            <ArrowUpDown className="w-3.5 h-3.5 text-stone-400" />
             <span>Sort</span>
             <select
               value={sortField}
               onChange={(e) => setSortField(e.target.value as AlertSortField)}
-              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 focus:border-blue-600 focus:outline-none"
+              className="rounded-lg border border-[#e5e3dc] dark:border-slate-700 bg-white dark:bg-[#182030] px-2.5 py-1 text-xs text-stone-800 dark:text-slate-200 focus:border-[#234aff] focus:outline-none"
             >
               <option value="relevance_score">Match Score</option>
               <option value="received_at">Received Date</option>
@@ -407,7 +407,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
           <button
             type="button"
             onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-2xs"
+            className="inline-flex items-center gap-1 rounded-lg border border-[#e5e3dc] dark:border-slate-700 bg-white dark:bg-[#182030] px-2.5 py-1 text-xs font-semibold text-stone-700 dark:text-slate-300 hover:bg-[#eeece6]/40 dark:hover:bg-slate-800 transition-colors shadow-2xs"
           >
             {sortDir === 'asc' ? (
               <>
@@ -422,15 +422,15 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
             )}
           </button>
 
-          <span className="h-4 w-px bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
+          <span className="h-4 w-px bg-[#e5e3dc] dark:bg-slate-700" aria-hidden="true" />
 
-          <label className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-400 font-medium">
-            <Layers className="w-3.5 h-3.5 text-slate-400" />
+          <label className="inline-flex items-center gap-1.5 text-stone-600 dark:text-slate-400 font-medium">
+            <Layers className="w-3.5 h-3.5 text-stone-400" />
             <span>Group by</span>
             <select
               value={groupBy}
               onChange={(e) => handleGroupChange(e.target.value as AlertGroupBy)}
-              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 focus:border-blue-600 focus:outline-none"
+              className="rounded-lg border border-[#e5e3dc] dark:border-slate-700 bg-white dark:bg-[#182030] px-2.5 py-1 text-xs text-stone-800 dark:text-slate-200 focus:border-[#234aff] focus:outline-none"
             >
               <option value="none">No Grouping</option>
               <option value="source_app">Source App</option>
@@ -442,12 +442,12 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
 
         <div className="flex items-center gap-2">
           {pagedAlerts.length > 0 && (
-            <label className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none pr-1">
+            <label className="inline-flex items-center gap-1.5 text-xs text-stone-600 dark:text-slate-400 cursor-pointer select-none pr-1">
               <input
                 type="checkbox"
                 checked={allOnPageSelected}
                 onChange={toggleSelectPage}
-                className="rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500"
+                className="rounded border-[#e5e3dc] dark:border-slate-600 bg-white dark:bg-slate-800 text-[#234aff] focus:ring-[#234aff]"
               />
               <span>Select page</span>
             </label>
@@ -456,15 +456,15 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
       </div>
 
       {selectedIds.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/90 dark:bg-blue-950/40 px-4 py-2.5 text-xs shadow-2xs">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-[#234aff]/25 dark:border-blue-900/60 bg-[#234aff]/5 dark:bg-blue-950/40 px-4 py-2.5 text-xs shadow-2xs">
           <div className="flex items-center gap-2">
-            <span className="font-mono-tabular font-bold text-blue-800 dark:text-blue-300">
+            <span className="font-mono-tabular font-bold text-[#234aff] dark:text-blue-300">
               {selectedIds.length} selected
             </span>
             <button
               type="button"
               onClick={() => setSelectedIds([])}
-              className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              className="text-[#234aff] dark:text-blue-400 hover:underline font-medium"
             >
               Clear
             </button>
@@ -475,7 +475,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
               type="button"
               disabled={bulkBusy}
               onClick={() => runBulkAction('apply')}
-              className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-60 shadow-2xs transition-colors"
+              className="btn-cobalt inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-white rounded-lg disabled:opacity-60 shadow-xs transition-colors"
             >
               <Check className="w-3 h-3" />
               Mark Applied
@@ -484,7 +484,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
               type="button"
               disabled={bulkBusy}
               onClick={() => runBulkAction('dismiss')}
-              className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg disabled:opacity-60 shadow-2xs transition-colors"
+              className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-[#eeece6]/40 dark:hover:bg-slate-800 rounded-lg disabled:opacity-60 shadow-2xs transition-colors"
             >
               <X className="w-3 h-3" />
               Dismiss
@@ -494,7 +494,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
                 type="button"
                 disabled={bulkBusy}
                 onClick={() => runBulkAction('restore')}
-                className="px-3 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg disabled:opacity-60 shadow-2xs transition-colors"
+                className="px-3 py-1 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-[#eeece6]/40 dark:hover:bg-slate-800 rounded-lg disabled:opacity-60 shadow-2xs transition-colors"
               >
                 Restore
               </button>
@@ -513,39 +513,39 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
       )}
 
       {filteredAndSorted.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#131926] p-10 text-center shadow-xs">
-          <Briefcase className="w-6 h-6 text-slate-400 dark:text-slate-500 mx-auto mb-2.5" />
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">No job alert recommendations yet</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+        <div className="studio-card rounded-2xl p-10 text-center">
+          <Briefcase className="w-6 h-6 text-stone-400 dark:text-slate-500 mx-auto mb-2.5" />
+          <h3 className="text-sm font-semibold text-stone-900 dark:text-slate-100">No job alert recommendations yet</h3>
+          <p className="text-xs text-stone-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
             Sync your inbox to find job titles from LinkedIn, Indeed, Wellfound, and other job alert emails.
           </p>
         </div>
       ) : (
         <div className="space-y-3">
           {groupedBuckets.map((bucket) => (
-            <div key={bucket.key} className="rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#131926] overflow-hidden shadow-2xs">
+            <div key={bucket.key} className="studio-card rounded-xl overflow-hidden">
               {groupBy !== 'none' && (
-                <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50/80 dark:bg-slate-850 border-b border-slate-200/80 dark:border-slate-800/80">
+                <div className="flex items-center justify-between px-4 py-2.5 bg-[#eeece6]/40 dark:bg-slate-850 border-b border-[#e5e3dc] dark:border-slate-800">
                   <span className={`text-xs font-semibold ${bucket.tone}`}>{bucket.label}</span>
-                  <span className="font-mono-tabular text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="font-mono-tabular text-[11px] text-stone-500 dark:text-slate-400">
                     {bucket.items.length} on page
                   </span>
                 </div>
               )}
 
-              <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+              <div className="divide-y divide-[#e5e3dc]/70 dark:divide-slate-800/60">
                 {bucket.items.map((item) => {
                   const scoreColor =
                     item.relevance_score >= 70
                       ? 'text-emerald-700 dark:text-emerald-400 font-bold'
-                      : item.relevance_score >= 45
-                      ? 'text-blue-700 dark:text-blue-400 font-bold'
-                      : 'text-slate-500 dark:text-slate-400';
+                      : item.relevance_score >= 40
+                      ? 'text-[#234aff] dark:text-blue-400 font-bold'
+                      : 'text-stone-500 dark:text-slate-400';
                   return (
                     <div
                       key={item.id}
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3.5 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors ${
-                        selectedIds.includes(item.id) ? 'bg-blue-50/30 dark:bg-blue-950/20' : ''
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3.5 hover:bg-[#eeece6]/20 dark:hover:bg-slate-800/40 transition-colors ${
+                        selectedIds.includes(item.id) ? 'bg-[#234aff]/5 dark:bg-blue-950/20' : ''
                       }`}
                     >
                       <div className="flex items-start gap-3 min-w-0">
@@ -554,21 +554,21 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
                           checked={selectedIds.includes(item.id)}
                           onChange={() => toggleSelectOne(item.id)}
                           aria-label={`Select ${item.job_title}`}
-                          className="mt-1 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 shrink-0"
+                          className="mt-1 rounded border-[#e5e3dc] dark:border-slate-600 bg-white dark:bg-slate-800 text-[#234aff] focus:ring-[#234aff] shrink-0"
                         />
                         <div className="min-w-0 space-y-1">
                           <div className="flex flex-wrap items-baseline gap-2">
-                            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            <span className="text-sm font-semibold text-stone-900 dark:text-slate-100">
                               {item.job_title}
                             </span>
                             {item.company_name && (
-                              <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                              <span className="text-xs font-medium text-stone-700 dark:text-slate-300">
                                 at {item.company_name}
                               </span>
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                            <span className="font-medium text-blue-700 dark:text-blue-400">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500 dark:text-slate-400">
+                            <span className="font-medium text-[#234aff] dark:text-blue-400">
                               From {item.source_app}
                             </span>
                             <span aria-hidden="true">·</span>
@@ -584,7 +584,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
                                 <span aria-hidden="true">·</span>
                                 <span
                                   title={item.relevance_reason}
-                                  className="text-slate-500 dark:text-slate-400 truncate max-w-xl cursor-help"
+                                  className="text-stone-500 dark:text-slate-400 truncate max-w-xl cursor-help"
                                 >
                                   {item.relevance_reason}
                                 </span>
@@ -601,7 +601,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
                             target="_blank"
                             rel="noreferrer"
                             title="Open original job listing"
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 shadow-2xs transition-colors"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-[#eeece6]/40 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 shadow-2xs transition-colors"
                           >
                             Open Job
                             <ExternalLink className="w-3.5 h-3.5" />
@@ -612,7 +612,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
                           <button
                             type="button"
                             onClick={() => onUpdateStatus(item.id, 'applied')}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg whitespace-nowrap shrink-0 shadow-2xs transition-colors"
+                            className="btn-cobalt inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white rounded-lg whitespace-nowrap shrink-0 shadow-xs transition-colors"
                           >
                             <Check className="w-3.5 h-3.5" />
                             Mark Applied
@@ -627,7 +627,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
                           <button
                             type="button"
                             onClick={() => onUpdateStatus(item.id, 'dismissed')}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 transition-colors"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-stone-600 dark:text-slate-400 border border-[#e5e3dc] dark:border-slate-700 hover:bg-[#eeece6]/40 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 transition-colors"
                           >
                             <X className="w-3.5 h-3.5" />
                             Dismiss
@@ -638,7 +638,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
                           <button
                             type="button"
                             onClick={() => onUpdateStatus(item.id, 'suggested')}
-                            className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 transition-colors"
+                            className="px-2.5 py-1.5 text-xs font-semibold text-stone-700 dark:text-slate-300 border border-[#e5e3dc] dark:border-slate-700 hover:bg-[#eeece6]/40 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 transition-colors"
                           >
                             Restore
                           </button>
@@ -649,7 +649,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
                           onClick={() => onDeleteAlert(item.id)}
                           title="Delete job alert"
                           aria-label={`Delete ${item.job_title}`}
-                          className="inline-flex items-center justify-center p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 hover:border-rose-200 dark:hover:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg shrink-0 transition-colors"
+                          className="inline-flex items-center justify-center p-1.5 text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 border border-[#e5e3dc] dark:border-slate-700 hover:border-rose-200 dark:hover:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg shrink-0 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -659,7 +659,7 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
                           title="More actions (move misclassified alert)"
                           aria-label={`More actions for ${item.job_title}`}
                           aria-expanded={actionMenu?.alert.id === item.id}
-                          className="inline-flex items-center justify-center p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg shrink-0 transition-colors"
+                          className="inline-flex items-center justify-center p-1.5 text-stone-400 hover:text-stone-800 dark:hover:text-slate-200 border border-[#e5e3dc] dark:border-slate-700 hover:bg-[#eeece6]/40 dark:hover:bg-slate-800 rounded-lg shrink-0 transition-colors"
                         >
                           <MoreVertical className="w-3.5 h-3.5" />
                         </button>
@@ -682,9 +682,9 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
             right: `${actionMenu.right}px`,
             transform: actionMenu.openUp ? 'translateY(-100%)' : undefined,
           }}
-          className="fixed z-50 w-52 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#131926] py-1 shadow-xl animate-in fade-in-50 zoom-in-95 duration-100"
+          className="fixed z-50 w-52 rounded-xl border border-[#e5e3dc] dark:border-slate-800 bg-white dark:bg-[#131926] py-1 shadow-xl animate-in fade-in-50 zoom-in-95 duration-100"
         >
-          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-slate-500">
             Move Misclassified Alert
           </div>
           <button
@@ -695,9 +695,9 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
               setActionMenu(null);
               onMoveWrongAlert(targetAlert, 'application');
             }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-stone-700 dark:text-slate-300 hover:bg-[#eeece6]/40 dark:hover:bg-slate-800 transition-colors"
           >
-            <Briefcase className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
+            <Briefcase className="w-3.5 h-3.5 text-stone-500 dark:text-slate-400 shrink-0" />
             <span>Move to Application</span>
           </button>
           <button
@@ -708,12 +708,12 @@ export const JobAlertsView: React.FC<JobAlertsViewProps> = ({
               setActionMenu(null);
               onMoveWrongAlert(targetAlert, 'interview');
             }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-blue-700 dark:text-blue-400 hover:bg-blue-50/70 dark:hover:bg-blue-950/40 transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs text-[#234aff] dark:text-blue-400 hover:bg-[#234aff]/10 dark:hover:bg-blue-950/40 transition-colors"
           >
-            <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+            <Calendar className="w-3.5 h-3.5 text-[#234aff] dark:text-blue-400 shrink-0" />
             <span>Move to Upcoming Interview</span>
           </button>
-          <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+          <div className="my-1 border-t border-[#e5e3dc] dark:border-slate-800" />
           <button
             type="button"
             role="menuitem"
