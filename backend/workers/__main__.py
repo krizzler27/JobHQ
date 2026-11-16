@@ -5,8 +5,10 @@ import sys
 
 from backend.core.database import DatabaseManager
 from backend.services.sync import ImapSyncService, SyncJobManager
+from backend.workers.auto_ghost import AutoGhostWorker
 from backend.workers.core.runner import WorkerRunner
 from backend.workers.email_job_sync import EmailJobSyncWorker
+from backend.workers.interview_lifecycle import InterviewLifecycleWorker
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,6 +29,8 @@ def main() -> None:
     # Register all background jobs here
     workers = [
         EmailJobSyncWorker(db=db, sync_jobs=sync_jobs),
+        InterviewLifecycleWorker(db=db),
+        AutoGhostWorker(db=db),
     ]
 
     runner = WorkerRunner(workers=workers)

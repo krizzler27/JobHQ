@@ -7,12 +7,9 @@ from sqlalchemy.orm import Session
 
 from backend.api.deps import AppContext, get_app_context, get_db
 from backend.api.schemas.llm import LlmDownloadPayload, LlmTestPayload
-from backend.llm import (
-    DOWNLOAD_MANAGER,
-    RECOMMENDED_SLMS,
-    get_llm_status,
-    test_llm_engine,
-)
+from backend.llm.downloader import DOWNLOAD_MANAGER
+from backend.llm.prompts import RECOMMENDED_SLMS
+from backend.llm.runtime import get_llm_status, test_llm_engine
 from backend.repositories.profile import ProfileRepository
 
 router = APIRouter()

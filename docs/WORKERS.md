@@ -56,6 +56,8 @@ Scheduling infrastructure is strictly separated from concrete domain jobs:
 - [backend/workers/core/base.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/core/base.py) — Abstract `BaseWorker` contract.
 - [backend/workers/core/runner.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/core/runner.py) — Generic `WorkerRunner` scheduler and thread dispatcher.
 - [backend/workers/email_job_sync.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/email_job_sync.py) — Concrete worker synchronizing job pipeline updates from IMAP email.
+- [backend/workers/interview_lifecycle.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/interview_lifecycle.py) — Concrete worker auto-completing past scheduled interviews.
+- [backend/workers/auto_ghost.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_ghost.py) — Concrete worker auto-ghosting stale applied applications.
 - [backend/workers/__main__.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/__main__.py) — Daemon process entrypoint (`python -m backend.workers`).
 - `backend/workers/__init__.py` and `backend/workers/core/__init__.py` — Empty package markers (0 bytes). Modules use explicit imports to avoid re-export bloat and circular dependencies.
 
@@ -91,11 +93,20 @@ The daemon orchestrator:
 ## 4. Concrete Workers
 
 ### `EmailJobSyncWorker` ([email_job_sync.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/email_job_sync.py))
-The default background worker:
 - Injects `DatabaseManager` and `SyncJobManager`.
 - Checks `profile_settings.auto_sync_enabled` and `profile_settings.auto_sync_cron` (default: `0 */4 * * *`).
 - Executes `sync_jobs.start_sync(days=profile.auto_sync_days)`.
 - If an IMAP sync is already running (e.g. triggered manually from the UI), it safely skips execution without conflicting.
+
+### `InterviewLifecycleWorker` ([interview_lifecycle.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/interview_lifecycle.py))
+- Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.
+- Runs hourly (`0 * * * *`).
+- Automatically transitions `upcoming` interviews whose scheduled end time (`scheduled_at + duration_minutes`) has elapsed to `completed`.
+
+### `AutoGhostWorker` ([auto_ghost.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_ghost.py))
+- Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.
+- Runs daily at midnight (`0 0 * * *`).
+- Automatically transitions `applied` applications with no updates for 10+ days to `ghosted` via `JobHQLifecycleService.ghost_stale_applications()`.
 
 ---
 

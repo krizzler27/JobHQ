@@ -6,11 +6,15 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 from backend.core.database import DatabaseManager
+from backend.repositories.applications import ApplicationRepository
 from backend.repositories.imap_config import ImapConfigRepository
+from backend.repositories.interviews import InterviewRepository
 from backend.repositories.profile import ProfileRepository
+from backend.workers.auto_ghost import AutoGhostWorker
 from backend.workers.core.base import BaseWorker
 from backend.workers.core.runner import WorkerRunner
 from backend.workers.email_job_sync import EmailJobSyncWorker
+from backend.workers.interview_lifecycle import InterviewLifecycleWorker
 
 
 class DummyTestWorker(BaseWorker):
@@ -151,6 +155,94 @@ class WorkerSubsystemTests(unittest.TestCase):
         mock_sync_jobs.get_status.return_value = {"status": "running"}
         worker.execute()
         mock_sync_jobs.start_sync.assert_not_called()
+
+    def test_interview_lifecycle_worker(self) -> None:
+        db = DatabaseManager(":memory:")
+        db.init_schema()
+
+        # Create past interview and future interview
+        with db.session_scope() as session:
+            repo = InterviewRepository(session)
+            iv_past = repo.create({
+                "company": "Past Corp",
+                "role_title": "Backend Dev",
+                "scheduled_at": "2026-11-10T10:00",
+                "duration_minutes": 45,
+                "status": "upcoming",
+            })
+            iv_future = repo.create({
+                "company": "Future Corp",
+                "role_title": "Lead Architect",
+                "scheduled_at": "2026-11-20T14:00",
+                "duration_minutes": 60,
+                "status": "upcoming",
+            })
+            past_id = iv_past.id
+            future_id = iv_future.id
+
+        worker = InterviewLifecycleWorker(db=db)
+        self.assertEqual(worker.name, "interview_lifecycle")
+        self.assertTrue(worker.is_enabled())
+        self.assertEqual(worker.get_cron(), "0 * * * *")
+
+        # Execute worker
+        worker.execute()
+
+        # Verify statuses
+        with db.session_scope() as session:
+            repo = InterviewRepository(session)
+            updated_past = repo.get(past_id)
+            updated_future = repo.get(future_id)
+
+            self.assertIsNotNone(updated_past)
+            self.assertEqual(updated_past.status, "completed")
+
+            self.assertIsNotNone(updated_future)
+            self.assertEqual(updated_future.status, "upcoming")
+
+    def test_auto_ghost_worker(self) -> None:
+        db = DatabaseManager(":memory:")
+        db.init_schema()
+
+        # Create stale application and fresh application
+        with db.session_scope() as session:
+            repo = ApplicationRepository(session)
+            app_stale = repo.create({
+                "company": "Ghost Inc",
+                "role_title": "Python Dev",
+                "status": "applied",
+                "applied_date": "2026-10-01",
+                "last_update_date": "2026-10-01",
+            })
+            app_fresh = repo.create({
+                "company": "Active Inc",
+                "role_title": "Fullstack Dev",
+                "status": "applied",
+                "applied_date": "2026-11-15",
+                "last_update_date": "2026-11-15",
+            })
+            stale_id = app_stale.id
+            fresh_id = app_fresh.id
+
+        worker = AutoGhostWorker(db=db, days_threshold=10)
+        self.assertEqual(worker.name, "auto_ghost")
+        self.assertTrue(worker.is_enabled())
+        self.assertEqual(worker.get_cron(), "0 0 * * *")
+
+        # Execute worker
+        worker.execute()
+
+        # Verify statuses
+        with db.session_scope() as session:
+            repo = ApplicationRepository(session)
+            updated_stale = repo.get(stale_id)
+            updated_fresh = repo.get(fresh_id)
+
+            self.assertIsNotNone(updated_stale)
+            self.assertEqual(updated_stale.status, "ghosted")
+
+            self.assertIsNotNone(updated_fresh)
+            self.assertEqual(updated_fresh.status, "applied")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""Repository for interview CRUD and bulk deletion."""
+"""Repository for interview CRUD and bulk operations."""
 
 from sqlalchemy import select
 
@@ -88,5 +88,17 @@ class InterviewRepository(BaseRepository[Interview]):
         )
         for iv in rows:
             self.session.delete(iv)
+        self.session.flush()
+        return len(rows)
+
+    def bulk_update_status(self, iv_ids: list[int], new_status: str) -> int:
+        """Updates the status of multiple interviews."""
+        if not iv_ids or new_status not in VALID_INTERVIEW_STATUSES:
+            return 0
+        rows = list(
+            self.session.scalars(select(Interview).where(Interview.id.in_(iv_ids)))
+        )
+        for iv in rows:
+            iv.status = new_status
         self.session.flush()
         return len(rows)

@@ -15,7 +15,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from backend.api.deps import DEFAULT_APP_CONTEXT, AppContext, get_app_context
-from backend.api.routers import register_routers
+from backend.api.routers.registry import register_routers
 
 
 def configure_logging() -> None:
