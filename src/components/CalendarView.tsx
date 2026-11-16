@@ -189,7 +189,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Top Controls Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-4 rounded-lg border border-slate-200">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white dark:bg-[#131926] p-4 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-2xs">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5">
             <button
@@ -197,14 +197,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               onClick={handlePrev}
               title="Previous"
               aria-label="Previous"
-              className="p-1.5 rounded-md border border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
+              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={handleToday}
-              className="px-2.5 py-1 text-xs font-medium rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             >
               Today
             </button>
@@ -213,25 +213,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               onClick={handleNext}
               title="Next"
               aria-label="Next"
-              className="p-1.5 rounded-md border border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
+              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
-          <h2 className="font-display text-base font-semibold text-slate-900 min-w-44">
+          <h2 className="font-display text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100 min-w-44">
             {MONTH_NAMES[currentMonth]} {currentYear}
           </h2>
 
           {/* View Mode Segmented Control */}
-          <div className="inline-flex items-center p-0.5 bg-slate-100 rounded-md border border-slate-200 text-xs font-medium">
+          <div className="inline-flex items-center p-0.5 bg-slate-100 dark:bg-slate-900/80 rounded-lg border border-slate-200/60 dark:border-slate-800 text-xs font-semibold">
             <button
               type="button"
               onClick={() => setMode('month')}
-              className={`px-3 py-1 rounded transition-colors ${
+              className={`px-3 py-1 rounded-md transition-colors ${
                 mode === 'month'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-2xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               Month
@@ -239,10 +239,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             <button
               type="button"
               onClick={() => setMode('week')}
-              className={`px-3 py-1 rounded transition-colors ${
+              className={`px-3 py-1 rounded-md transition-colors ${
                 mode === 'week'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-2xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               Week
@@ -250,10 +250,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             <button
               type="button"
               onClick={() => setMode('agenda')}
-              className={`px-3 py-1 rounded transition-colors ${
+              className={`px-3 py-1 rounded-md transition-colors ${
                 mode === 'agenda'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-2xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               Agenda
@@ -267,9 +267,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             type="button"
             onClick={toggleFirstDayOfWeek}
             title="Toggle first day of week"
-            className="px-2.5 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 rounded-md whitespace-nowrap"
+            className="px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shadow-2xs transition-colors"
           >
-            Starts on <span className="font-semibold text-slate-900">{firstDayOfWeek === 1 ? 'Mon' : 'Sun'}</span>
+            Starts on <span className="font-semibold text-slate-900 dark:text-slate-100">{firstDayOfWeek === 1 ? 'Mon' : 'Sun'}</span>
           </button>
 
           {/* Search bar */}
@@ -280,7 +280,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search calendar..."
-              className="pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md w-48 sm:w-56 focus:border-blue-600 focus:outline-none"
+              className="pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 w-48 sm:w-56 focus:border-blue-600 focus:outline-none shadow-2xs"
             />
           </div>
         </div>
@@ -291,10 +291,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveKindFilter('all')}
-          className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+          className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
             activeKindFilter === 'all'
-              ? 'bg-slate-900 text-white border-slate-900'
-              : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+              ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-2xs'
+              : 'bg-white dark:bg-[#131926] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
           }`}
         >
           All ({allEvents.length})
@@ -303,10 +303,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveKindFilter('interview')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
             activeKindFilter === 'interview'
-              ? 'bg-indigo-600 text-white border-indigo-600'
-              : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50'
+              ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+              : 'bg-white dark:bg-[#131926] text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'
           }`}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
@@ -316,10 +316,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveKindFilter('applied')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
             activeKindFilter === 'applied'
-              ? 'bg-blue-600 text-white border-blue-600'
-              : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+              : 'bg-white dark:bg-[#131926] text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 hover:bg-blue-50 dark:hover:bg-blue-950/40'
           }`}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
@@ -329,10 +329,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveKindFilter('offer')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
             activeKindFilter === 'offer'
-              ? 'bg-emerald-600 text-white border-emerald-600'
-              : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'
+              ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+              : 'bg-white dark:bg-[#131926] text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
           }`}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -342,10 +342,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveKindFilter('rejected')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
             activeKindFilter === 'rejected'
-              ? 'bg-rose-600 text-white border-rose-600'
-              : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'
+              ? 'bg-rose-600 text-white border-rose-600 shadow-2xs'
+              : 'bg-white dark:bg-[#131926] text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40'
           }`}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
@@ -355,10 +355,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveKindFilter('ghosted')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
             activeKindFilter === 'ghosted'
-              ? 'bg-amber-600 text-white border-amber-600'
-              : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
+              ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
+              : 'bg-white dark:bg-[#131926] text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/60 hover:bg-amber-50 dark:hover:bg-amber-950/40'
           }`}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -368,16 +368,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
       {/* Main View Area */}
       {mode === 'month' ? (
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs">
+        <div className="bg-white dark:bg-[#131926] rounded-xl border border-slate-200/80 dark:border-slate-800/80 overflow-hidden shadow-2xs">
           {/* Weekday headers */}
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-xs font-semibold text-slate-600 py-2.5">
+          <div className="grid grid-cols-7 border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/80 dark:bg-[#0e1420]/80 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 py-3">
             {weekdayHeaders.map((day) => (
               <div key={day}>{day}</div>
             ))}
           </div>
 
           {/* Month Grid Cells */}
-          <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100 border-b border-slate-100">
+          <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100 dark:divide-slate-800/60 border-b border-slate-100 dark:border-slate-800/60">
             {monthCells.map((cell) => {
               const maxVisible = 3;
               const visibleEvents = cell.events.slice(0, maxVisible);
@@ -387,25 +387,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 <div
                   key={cell.dateKey}
                   onClick={() => setInspectedDateKey(cell.dateKey)}
-                  className={`min-h-[110px] p-2 flex flex-col justify-between transition-colors cursor-pointer group hover:bg-slate-50/80 ${
-                    cell.isCurrentMonth ? 'bg-white' : 'bg-slate-50/50'
+                  className={`min-h-[110px] p-2 flex flex-col justify-between transition-colors cursor-pointer group hover:bg-slate-50/80 dark:hover:bg-slate-800/40 ${
+                    cell.isCurrentMonth ? 'bg-white dark:bg-[#131926]' : 'bg-slate-50/50 dark:bg-[#0e1420]/40'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span
                       className={`inline-flex items-center justify-center text-xs font-mono-tabular w-6 h-6 rounded-full ${
                         cell.isToday
-                          ? 'bg-blue-600 text-white font-bold'
+                          ? 'bg-blue-600 text-white font-bold ring-2 ring-blue-600/20'
                           : cell.isCurrentMonth
-                          ? 'text-slate-800 group-hover:text-blue-600'
-                          : 'text-slate-400'
+                          ? 'text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400'
+                          : 'text-slate-400 dark:text-slate-600'
                       }`}
                     >
                       {cell.dayNumber}
                     </span>
 
                     {cell.events.length > 0 && (
-                      <span className="text-[10px] text-slate-400 font-mono-tabular">
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono-tabular">
                         {cell.events.length}
                       </span>
                     )}
@@ -461,21 +461,21 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
       ) : mode === 'week' ? (
         /* Week View: 7 Columns with full event cards */
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs">
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center py-3">
+        <div className="bg-white dark:bg-[#131926] rounded-xl border border-slate-200/80 dark:border-slate-800/80 overflow-hidden shadow-2xs">
+          <div className="grid grid-cols-7 border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/80 dark:bg-[#0e1420]/80 text-center py-3">
             {weekDays.map((d) => {
               const key = formatDateKey(d);
               const isToday = key === formatDateKey(new Date());
               return (
                 <div key={key} className="space-y-0.5">
-                  <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     {d.toLocaleDateString(undefined, { weekday: 'short' })}
                   </p>
                   <span
                     className={`inline-flex items-center justify-center text-xs font-mono-tabular w-6 h-6 rounded-full ${
                       isToday
                         ? 'bg-blue-600 text-white font-bold'
-                        : 'text-slate-800'
+                        : 'text-slate-800 dark:text-slate-200'
                     }`}
                   >
                     {d.getDate()}
@@ -485,7 +485,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             })}
           </div>
 
-          <div className="grid grid-cols-7 divide-x divide-slate-100 min-h-[420px]">
+          <div className="grid grid-cols-7 divide-x divide-slate-100 dark:divide-slate-800/60 min-h-[420px]">
             {weekDays.map((d) => {
               const key = formatDateKey(d);
               const events = eventsByDate[key] || [];
@@ -494,10 +494,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 <div
                   key={key}
                   onClick={() => setInspectedDateKey(key)}
-                  className="p-2 space-y-2 hover:bg-slate-50/60 transition-colors cursor-pointer"
+                  className="p-2 space-y-2 hover:bg-slate-50/60 dark:hover:bg-slate-850/50 transition-colors cursor-pointer"
                 >
                   {events.length === 0 ? (
-                    <div className="h-full flex items-center justify-center text-[11px] text-slate-300">
+                    <div className="h-full flex items-center justify-center text-[11px] text-slate-300 dark:text-slate-600">
                       Empty
                     </div>
                   ) : (
@@ -514,22 +514,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                               setInspectedDateKey(key);
                             }
                           }}
-                          className={`p-2 rounded-md border text-xs space-y-1 transition-shadow hover:shadow-xs cursor-pointer ${tone.bg} ${tone.border}`}
+                          className={`p-2 rounded-lg border text-xs space-y-1 transition-shadow hover:shadow-xs cursor-pointer ${tone.bg} ${tone.border}`}
                         >
                           <div className="flex items-center justify-between gap-1">
-                            <span className={`text-[10px] font-semibold uppercase ${tone.text}`}>
+                            <span className={`text-[10px] font-bold uppercase ${tone.text}`}>
                               {ev.kind}
                             </span>
                             {ev.timeStr && (
-                              <span className="text-[10px] text-slate-500 font-mono-tabular">
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono-tabular">
                                 {ev.timeStr}
                               </span>
                             )}
                           </div>
-                          <p className="font-semibold text-slate-900 truncate">
+                          <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">
                             {ev.company}
                           </p>
-                          <p className="text-[11px] text-slate-600 truncate">
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate">
                             {ev.role_title}
                           </p>
                           {ev.meetingLink && (
@@ -538,7 +538,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                               target="_blank"
                               rel="noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 text-[11px] text-indigo-700 font-medium underline"
+                              className="inline-flex items-center gap-1 text-[11px] text-indigo-700 dark:text-indigo-400 font-medium underline"
                             >
                               <Video className="w-3 h-3" />
                               Join
@@ -555,12 +555,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
       ) : (
         /* Agenda View: Chronological list view ideal for 10+ bulk applications */
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden divide-y divide-slate-100">
+        <div className="bg-white dark:bg-[#131926] rounded-xl border border-slate-200/80 dark:border-slate-800/80 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/60 shadow-2xs">
           {Object.keys(eventsByDate).length === 0 ? (
-            <div className="p-12 text-center text-slate-500">
-              <CalendarDays className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-              <p className="text-sm font-semibold text-slate-900">No events found</p>
-              <p className="text-xs text-slate-500 mt-1">
+            <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+              <CalendarDays className="w-8 h-8 text-slate-400 dark:text-slate-500 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">No events found</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Try selecting &apos;All&apos; or adjusting your search term.
               </p>
             </div>
@@ -580,7 +580,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         className={`w-10 h-10 rounded-lg flex flex-col items-center justify-center font-mono-tabular ${
                           isToday
                             ? 'bg-blue-600 text-white'
-                            : 'bg-slate-100 text-slate-800'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200'
                         }`}
                       >
                         <span className="text-[10px] uppercase font-bold leading-tight">
@@ -591,10 +591,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         </span>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-slate-900">
+                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                           {d.toLocaleDateString(undefined, { weekday: 'long' })}
                         </p>
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
                           {dayEvents.length} {dayEvents.length === 1 ? 'event' : 'events'}
                         </p>
                       </div>
@@ -622,16 +622,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                                   {ev.kind}
                                 </span>
                                 {ev.timeStr && (
-                                  <span className="text-xs font-semibold text-slate-700 font-mono-tabular">
+                                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 font-mono-tabular">
                                     {ev.timeStr}
                                     {ev.timeEndStr ? ` – ${ev.timeEndStr}` : ''}
                                   </span>
                                 )}
                               </div>
-                              <h4 className="text-sm font-semibold text-slate-900 truncate">
+                              <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                                 {ev.company}
                               </h4>
-                              <p className="text-xs text-slate-600 truncate">
+                              <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
                                 {ev.role_title}
                               </p>
                             </div>
@@ -643,7 +643,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                                   target="_blank"
                                   rel="noreferrer"
                                   onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-2xs"
                                 >
                                   <Video className="w-3.5 h-3.5" />
                                   Join Meeting
@@ -656,7 +656,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                                     e.stopPropagation();
                                     onSelectApplication(ev.rawApplication!);
                                   }}
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-md transition-colors"
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors shadow-2xs"
                                 >
                                   Details
                                   <ExternalLink className="w-3 h-3 text-slate-400" />
@@ -676,25 +676,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
       {/* Apple-Style Day Inspector Drawer (Handles 10+ jobs gracefully) */}
       {inspectedDateKey && (
-        <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/30 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/40 dark:bg-black/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
           <div
-            className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200"
+            className="w-full max-w-md bg-white dark:bg-[#131926] h-full shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drawer Header */}
-            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+            <div className="px-5 py-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between">
               <div>
-                <h3 className="font-display text-sm font-bold text-slate-900">
+                <h3 className="font-display text-sm font-bold text-slate-900 dark:text-slate-100">
                   {inspectedDateLabel}
                 </h3>
-                <p className="text-xs text-slate-500 font-mono-tabular">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-mono-tabular">
                   {inspectedEvents.length} {inspectedEvents.length === 1 ? 'event' : 'events'} recorded
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setInspectedDateKey(null)}
-                className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -703,7 +703,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             {/* Drawer Events List */}
             <div className="flex-1 overflow-y-auto p-5 space-y-3">
               {inspectedEvents.length === 0 ? (
-                <div className="py-12 text-center text-slate-400">
+                <div className="py-12 text-center text-slate-400 dark:text-slate-500">
                   <p className="text-xs">No events on this date.</p>
                 </div>
               ) : (
@@ -723,7 +723,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         </span>
 
                         {ev.timeStr && (
-                          <span className="text-xs font-semibold text-slate-700 font-mono-tabular">
+                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 font-mono-tabular">
                             {ev.timeStr}
                             {ev.timeEndStr ? ` – ${ev.timeEndStr}` : ''}
                           </span>
@@ -731,22 +731,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       </div>
 
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-900">
+                        <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                           {ev.company}
                         </h4>
-                        <p className="text-xs text-slate-600">
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
                           {ev.role_title}
                         </p>
                       </div>
 
                       {/* Action buttons */}
-                      <div className="pt-2 border-t border-slate-200/50 flex items-center justify-between gap-2">
+                      <div className="pt-2 border-t border-slate-200/50 dark:border-slate-700/50 flex items-center justify-between gap-2">
                         {ev.meetingLink ? (
                           <a
                             href={ev.meetingLink}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-2xs"
                           >
                             <Video className="w-3.5 h-3.5" />
                             Join Video Call
@@ -760,7 +760,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                               setInspectedDateKey(null);
                               onSelectApplication(ev.rawApplication!);
                             }}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-md transition-colors"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors shadow-2xs"
                           >
                             Open Application
                             <ExternalLink className="w-3 h-3 text-slate-400" />
@@ -774,11 +774,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             </div>
 
             {/* Drawer Footer */}
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end">
+            <div className="p-4 border-t border-slate-200/80 dark:border-slate-800/80 bg-slate-50/70 dark:bg-[#0e1420]/70 flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => setInspectedDateKey(null)}
-                className="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md transition-colors"
+                className="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
               >
                 Close
               </button>

@@ -22,7 +22,7 @@ import { AddApplicationModal, AddInterviewModal } from './components/AddModals';
 import { ApplicationDrawer } from './components/ApplicationDrawer';
 import { ApplicationsTableView } from './components/ApplicationsTableView';
 import { AppHeader, AppSidebar, NAV_ITEMS } from './components/AppNavigation';
-import type { NavTab } from './components/AppNavigation';
+import type { NavTab, ThemeMode } from './components/AppNavigation';
 import { BatchDeleteKeywordModal } from './components/BatchDeleteKeywordModal';
 import type { BatchDeleteCandidateItem } from './components/BatchDeleteKeywordModal';
 import { CalendarView } from './components/CalendarView';
@@ -78,6 +78,36 @@ export default function App() {
     }
     return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true;
   });
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    try {
+      const saved = window.localStorage.getItem('job_tracker_theme');
+      if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
+    } catch {
+      // Ignore storage failures
+    }
+    return 'system';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const applyTheme = () => {
+      const isDark =
+        theme === 'dark' ||
+        (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      root.classList.toggle('dark', isDark);
+    };
+    applyTheme();
+    try {
+      window.localStorage.setItem('job_tracker_theme', theme);
+    } catch {}
+
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const listener = () => {
+      if (theme === 'system') applyTheme();
+    };
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [theme]);
   const [overviewPaceMode, setOverviewPaceMode] = useState<'daily' | 'weekly'>('weekly');
 
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
@@ -693,7 +723,7 @@ export default function App() {
   const imap = dashboard?.imap;
 
   return (
-    <div className="min-h-screen flex bg-slate-50 text-slate-900">
+    <div className="min-h-screen flex bg-[var(--canvas)] text-slate-900 dark:text-slate-100 transition-colors duration-150">
       <AppSidebar
         sidebarOpen={sidebarOpen}
         onToggleSidebar={toggleSidebar}
@@ -703,6 +733,8 @@ export default function App() {
         upcomingInterviewsCount={dashboard?.kpis.upcoming_interviews || 0}
         imap={imap}
         onOpenImapModal={() => setShowImapModal(true)}
+        theme={theme}
+        onSelectTheme={setTheme}
       />
 
       {/* Main Content */}
@@ -877,7 +909,7 @@ export default function App() {
           ) : activeTab === 'applications' ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <input
@@ -885,19 +917,19 @@ export default function App() {
                       value={appSearch}
                       onChange={(e) => setAppSearch(e.target.value)}
                       placeholder="Search company, role, source..."
-                      className="pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md w-60 focus:border-blue-600 focus:outline-none"
+                      className="pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 w-60 focus:border-blue-600 focus:outline-none shadow-2xs"
                     />
                   </div>
 
                   {appViewMode === 'table' && (
-                    <div className="inline-flex items-center gap-1 p-1 bg-slate-100 rounded-md border border-slate-200">
+                    <div className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-900/80 rounded-lg border border-slate-200/60 dark:border-slate-800">
                       <button
                         type="button"
                         onClick={() => setAppStatusFilter('all')}
-                        className={`px-2.5 py-1 text-xs font-medium rounded whitespace-nowrap ${
+                        className={`px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
                           appStatusFilter === 'all'
-                            ? 'bg-white text-slate-900 border border-slate-200'
-                            : 'text-slate-600 hover:text-slate-900'
+                            ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-2xs'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                         }`}
                       >
                         All
@@ -907,10 +939,10 @@ export default function App() {
                           key={st.key}
                           type="button"
                           onClick={() => setAppStatusFilter(st.key)}
-                          className={`px-2.5 py-1 text-xs font-medium rounded whitespace-nowrap ${
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
                             appStatusFilter === st.key
-                              ? 'bg-white text-slate-900 border border-slate-200'
-                              : 'text-slate-600 hover:text-slate-900'
+                              ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-2xs'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                           }`}
                         >
                           {st.label}
@@ -923,10 +955,10 @@ export default function App() {
                     type="button"
                     onClick={() => setAppStaleOnly((v) => !v)}
                     title="Show applications unchanged for 10+ days (auto-moved to Ghosted)"
-                    className={`px-2.5 py-1.5 text-xs font-medium rounded-md border whitespace-nowrap ${
+                    className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border whitespace-nowrap transition-colors shadow-2xs ${
                       appStaleOnly
-                        ? 'bg-amber-50 border-amber-300 text-amber-800'
-                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                        ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300'
+                        : 'bg-white dark:bg-[#131926] border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
                     Follow-up 10d+ ({staleAppCount})
@@ -948,7 +980,7 @@ export default function App() {
                           ),
                         })
                       }
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 rounded-md whitespace-nowrap"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-white dark:bg-[#131926] border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg whitespace-nowrap shadow-2xs transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Batch Delete
@@ -959,20 +991,20 @@ export default function App() {
                     type="button"
                     onClick={handleExportAppsCsv}
                     disabled={filteredApps.length === 0}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-md whitespace-nowrap disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap disabled:opacity-50 shadow-2xs transition-colors"
                   >
                     <Download className="w-3.5 h-3.5" />
                     Export CSV
                   </button>
 
-                  <div className="inline-flex items-center gap-1 p-1 bg-slate-100 rounded-md border border-slate-200">
+                  <div className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-900/80 rounded-lg border border-slate-200/60 dark:border-slate-800">
                     <button
                       type="button"
                       onClick={() => setAppViewMode('kanban')}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded whitespace-nowrap ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
                         appViewMode === 'kanban'
-                          ? 'bg-white text-slate-900 border border-slate-200'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-2xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                       }`}
                     >
                       <Columns3 className="w-3.5 h-3.5" />
@@ -981,10 +1013,10 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setAppViewMode('table')}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded whitespace-nowrap ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
                         appViewMode === 'table'
-                          ? 'bg-white text-slate-900 border border-slate-200'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-2xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                       }`}
                     >
                       <Table2 className="w-3.5 h-3.5" />
@@ -995,12 +1027,12 @@ export default function App() {
               </div>
 
               {filteredApps.length === 0 ? (
-                <div className="rounded-lg border border-slate-200 bg-white p-10 text-center">
-                  <ListFilter className="w-6 h-6 text-slate-400 mx-auto mb-2.5" />
-                  <h3 className="text-sm font-semibold text-slate-900">
+                <div className="rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#131926] p-10 text-center shadow-2xs">
+                  <ListFilter className="w-6 h-6 text-slate-400 dark:text-slate-500 mx-auto mb-2.5" />
+                  <h3 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     No matching applications
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Adjust your search/filter or add a new application.
                   </p>
                 </div>

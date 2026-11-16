@@ -44,14 +44,14 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs text-slate-600">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#131926] px-4 py-2.5 text-xs text-slate-600 dark:text-slate-400 shadow-2xs">
       <div className="flex items-center gap-3">
         <span className="font-mono-tabular">
-          Showing <span className="font-semibold text-slate-900">{startIdx}–{endIdx}</span> of{' '}
-          <span className="font-semibold text-slate-900">{totalItems}</span> {itemLabel}
+          Showing <span className="font-semibold text-slate-900 dark:text-slate-100">{startIdx}–{endIdx}</span> of{' '}
+          <span className="font-semibold text-slate-900 dark:text-slate-100">{totalItems}</span> {itemLabel}
         </span>
 
-        <label className="inline-flex items-center gap-1.5 text-slate-500">
+        <label className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
           <span>Per page</span>
           <select
             value={pageSize}
@@ -59,7 +59,7 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
               onPageSizeChange(Number(e.target.value));
               onPageChange(1);
             }}
-            className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-mono-tabular text-slate-800 focus:border-blue-600 focus:outline-none"
+            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] px-2 py-1 text-xs font-mono-tabular text-slate-800 dark:text-slate-200 focus:border-blue-600 focus:outline-none"
           >
             {pageSizeOptions.map((opt) => (
               <option key={opt} value={opt}>
@@ -76,7 +76,7 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
           onClick={() => onPageChange(safePage - 1)}
           disabled={safePage <= 1}
           aria-label="Previous page"
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none"
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-colors"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
           Prev
@@ -84,7 +84,7 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
 
         {buildPageNumbers().map((token, idx) =>
           token === 'ellipsis' ? (
-            <span key={`e-${idx}`} className="px-1.5 text-slate-400">
+            <span key={`e-${idx}`} className="px-1.5 text-slate-400 dark:text-slate-600">
               …
             </span>
           ) : (
@@ -92,10 +92,10 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
               key={token}
               type="button"
               onClick={() => onPageChange(token)}
-              className={`min-w-[28px] px-2 py-1 rounded border font-mono-tabular text-xs transition-colors ${
+              className={`min-w-[28px] px-2 py-1 rounded-lg border font-mono-tabular text-xs transition-colors ${
                 token === safePage
-                  ? 'bg-blue-600 border-blue-600 text-white font-semibold'
-                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  ? 'bg-blue-600 border-blue-600 text-white font-semibold shadow-2xs'
+                  : 'bg-white dark:bg-[#182030] border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
               {token}
@@ -108,7 +108,7 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
           onClick={() => onPageChange(safePage + 1)}
           disabled={safePage >= totalPages}
           aria-label="Next page"
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none"
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-colors"
         >
           Next
           <ChevronRight className="w-3.5 h-3.5" />

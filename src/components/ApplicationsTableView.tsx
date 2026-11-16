@@ -48,6 +48,22 @@ const STAGE_LABEL: Record<ApplicationStatus, string> = {
   ghosted: 'Ghosted',
 };
 
+const STAGE_SELECT_STYLES: Record<ApplicationStatus, string> = {
+  applied: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+  interviewing: 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/80',
+  offer: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/80',
+  rejected: 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/80',
+  ghosted: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/80',
+};
+
+const STAGE_ROW_BORDER: Record<ApplicationStatus, string> = {
+  applied: 'border-l-slate-400 dark:border-l-slate-500',
+  interviewing: 'border-l-blue-600 dark:border-l-blue-500',
+  offer: 'border-l-emerald-600 dark:border-l-emerald-500',
+  rejected: 'border-l-rose-500 dark:border-l-rose-500',
+  ghosted: 'border-l-amber-500 dark:border-l-amber-400',
+};
+
 export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
   applications,
   stageTone,
@@ -216,18 +232,18 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
   return (
     <div className="space-y-3">
       {/* Table Controls: Sort & Group By */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#131926] px-4 py-3 shadow-2xs">
         <div className="flex flex-wrap items-center gap-2.5 text-xs">
-          <label className="inline-flex items-center gap-1.5 text-slate-600">
-            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-            <span>Sort</span>
+          <label className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+            <span className="font-medium">Sort</span>
             <select
               value={sortField}
               onChange={(e) => {
                 setSortField(e.target.value as AppSortField);
                 setPage(1);
               }}
-              className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800 focus:border-blue-600 focus:outline-none"
+              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 focus:border-blue-600 focus:outline-none"
             >
               <option value="last_update_date">Last Updated</option>
               <option value="applied_date">Applied Date</option>
@@ -245,7 +261,7 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
               setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
               setPage(1);
             }}
-            className="inline-flex items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
             {sortDir === 'asc' ? (
               <>
@@ -260,15 +276,15 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
             )}
           </button>
 
-          <span className="h-4 w-px bg-slate-200" aria-hidden="true" />
+          <span className="h-4 w-px bg-slate-200 dark:bg-slate-800" aria-hidden="true" />
 
-          <label className="inline-flex items-center gap-1.5 text-slate-600">
-            <Layers className="w-3.5 h-3.5 text-slate-400" />
-            <span>Group by</span>
+          <label className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+            <Layers className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+            <span className="font-medium">Group by</span>
             <select
               value={groupBy}
               onChange={(e) => handleGroupChange(e.target.value as AppGroupBy)}
-              className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800 focus:border-blue-600 focus:outline-none"
+              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 focus:border-blue-600 focus:outline-none"
             >
               <option value="none">No Grouping</option>
               <option value="status">Stage</option>
@@ -281,9 +297,9 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
 
       {/* Bulk Selection Action Bar */}
       {selectedIds.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-blue-200 bg-blue-50/80 px-3.5 py-2 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/90 dark:bg-blue-950/40 px-4 py-2.5 text-xs shadow-2xs">
           <div className="flex items-center gap-2">
-            <span className="font-mono-tabular font-semibold text-blue-800">
+            <span className="font-mono-tabular font-bold text-blue-800 dark:text-blue-300">
               {selectedIds.length} selected
             </span>
             <button
@@ -292,7 +308,7 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
                 setSelectedIds([]);
                 setConfirmDelete(false);
               }}
-              className="text-blue-700 hover:underline"
+              className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
             >
               Clear
             </button>
@@ -302,7 +318,7 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
             <select
               value={bulkTargetStage}
               onChange={(e) => setBulkTargetStage(e.target.value as ApplicationStatus)}
-              className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800 focus:border-blue-600 focus:outline-none"
+              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 focus:border-blue-600 focus:outline-none"
             >
               {APPLICATION_STAGES.map((st) => (
                 <option key={st.key} value={st.key}>
@@ -314,7 +330,7 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
               type="button"
               disabled={bulkBusy}
               onClick={handleBulkMove}
-              className="px-2.5 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-60"
+              className="px-3 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-2xs disabled:opacity-60 transition-colors"
             >
               Apply Stage
             </button>
@@ -324,7 +340,7 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
                 type="button"
                 disabled={bulkBusy}
                 onClick={handleBulkDelete}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-rose-600 hover:bg-rose-700 rounded disabled:opacity-60"
+                className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-2xs disabled:opacity-60 transition-colors"
               >
                 <Trash2 className="w-3 h-3" />
                 Confirm Delete ({selectedIds.length})
@@ -334,7 +350,7 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
                 type="button"
                 disabled={bulkBusy}
                 onClick={() => setConfirmDelete(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 rounded disabled:opacity-60"
+                className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-white dark:bg-[#182030] border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg shadow-2xs disabled:opacity-60 transition-colors"
               >
                 <Trash2 className="w-3 h-3" />
                 Delete Selected
@@ -345,17 +361,17 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
       )}
 
       {/* Table Rows Layout (Flat or Grouped Sections) */}
-      <div className="rounded-lg border border-slate-200 bg-white overflow-x-auto">
+      <div className="rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#131926] overflow-x-auto shadow-2xs">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600 select-none">
-                <th className="py-2.5 pl-4 pr-2 w-8">
+              <tr className="border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/80 dark:bg-[#0e1420]/70 text-[11px] font-semibold text-slate-500 dark:text-slate-400 select-none">
+                <th className="py-3 pl-4 pr-2 w-8">
                   <input
                     type="checkbox"
                     checked={allOnPageSelected}
                     onChange={toggleSelectPage}
                     aria-label="Select all on page"
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
                   />
                 </th>
                 <th className="py-2.5 px-4">
@@ -420,17 +436,17 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm">
               {groupedBuckets.map((bucket) => (
                 <React.Fragment key={bucket.key}>
                   {groupBy !== 'none' && (
-                    <tr className="bg-slate-50/90 border-y border-slate-200">
+                    <tr className="bg-slate-50/90 dark:bg-[#0e1420]/80 border-y border-slate-200 dark:border-slate-800">
                       <td colSpan={7} className="py-2 px-4">
                         <div className="flex items-center justify-between">
                           <span className={`text-xs font-semibold ${bucket.tone}`}>
                             {bucket.label}
                           </span>
-                          <span className="font-mono-tabular text-[11px] text-slate-500">
+                          <span className="font-mono-tabular text-[11px] text-slate-400 dark:text-slate-500">
                             {bucket.items.length} on page
                           </span>
                         </div>
@@ -445,8 +461,10 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
                       <tr
                         key={app.id}
                         onClick={() => onSelectApplication(app)}
-                        className={`cursor-pointer hover:bg-slate-50/70 ${
-                          checked ? 'bg-blue-50/30' : ''
+                        className={`cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/40 border-l-[3.5px] ${
+                          STAGE_ROW_BORDER[app.status]
+                        } transition-colors ${
+                          checked ? 'bg-blue-50/50 dark:bg-blue-950/30' : ''
                         }`}
                       >
                         <td
@@ -458,12 +476,12 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
                             checked={checked}
                             onChange={() => toggleSelectOne(app.id)}
                             aria-label={`Select ${app.role_title}`}
-                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
                           />
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-slate-900">{app.role_title}</span>
+                            <span className="font-semibold text-slate-900 dark:text-slate-100 text-[13px]">{app.role_title}</span>
                             {app.job_url && (
                               <a
                                 href={app.job_url}
@@ -471,14 +489,14 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
                                 rel="noreferrer"
                                 onClick={(e) => e.stopPropagation()}
                                 title="Open job or application portal link"
-                                className="inline-flex items-center gap-0.5 text-[11px] font-medium text-blue-600 hover:underline shrink-0"
+                                className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline shrink-0"
                               >
                                 Link
                                 <ExternalLink className="w-3 h-3" />
                               </a>
                             )}
                           </div>
-                          <div className="text-xs text-slate-500">{app.company}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{app.company}</div>
                         </td>
                         <td
                           className="py-3 px-4"
@@ -489,30 +507,30 @@ export const ApplicationsTableView: React.FC<ApplicationsTableViewProps> = ({
                             onChange={(e) =>
                               onMoveStage(app.id, e.target.value as ApplicationStatus)
                             }
-                            className={`text-xs font-medium bg-transparent border border-slate-200 rounded px-2 py-1 focus:border-blue-600 focus:outline-none ${
-                              stageTone[app.status]
+                            className={`text-xs font-semibold border rounded-lg px-2.5 py-1 focus:border-blue-600 focus:outline-none transition-colors ${
+                              STAGE_SELECT_STYLES[app.status]
                             }`}
                           >
                             {APPLICATION_STAGES.map((st) => (
-                              <option key={st.key} value={st.key} className="text-slate-900">
+                              <option key={st.key} value={st.key} className="bg-white dark:bg-[#131926] text-slate-900 dark:text-slate-100">
                                 {st.label}
                               </option>
                             ))}
                           </select>
                         </td>
-                        <td className="py-3 px-4 text-xs text-slate-600">
+                        <td className="py-3 px-4 text-xs text-slate-600 dark:text-slate-400">
                           {app.source_platform || '—'}
                         </td>
-                        <td className="py-3 px-4 text-xs text-slate-600">
+                        <td className="py-3 px-4 text-xs text-slate-600 dark:text-slate-400">
                           {app.location || '—'}
                         </td>
-                        <td className="py-3 px-4 font-mono-tabular text-xs text-slate-600">
+                        <td className="py-3 px-4 font-mono-tabular text-xs text-slate-600 dark:text-slate-400">
                           {app.applied_date || '—'}
                         </td>
-                        <td className="py-3 px-4 font-mono-tabular text-xs text-slate-600">
+                        <td className="py-3 px-4 font-mono-tabular text-xs text-slate-600 dark:text-slate-400">
                           <div>{app.last_update_date || '—'}</div>
                           {stale && (
-                            <div className="text-[11px] font-medium text-amber-700 mt-0.5">
+                            <div className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 mt-0.5">
                               {daysOld}d+ stale
                             </div>
                           )}
