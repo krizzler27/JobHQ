@@ -71,24 +71,24 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   return (
     <aside
       aria-hidden={!sidebarOpen}
-      className={`shrink-0 bg-white dark:bg-[#111622] overflow-hidden transition-[width,opacity] duration-200 ease-in-out ${
+      className={`shrink-0 bg-[#fcfbf9] dark:bg-[#111622] overflow-hidden transition-[width,opacity] duration-200 ease-in-out ${
         sidebarOpen
-          ? 'w-60 border-r border-slate-200/90 dark:border-slate-800/90 opacity-100'
+          ? 'w-60 border-r border-[#e5e3dc] dark:border-slate-800/90 opacity-100'
           : 'w-0 border-r-0 opacity-0 pointer-events-none'
       }`}
     >
       <div className="w-60 h-full min-h-screen flex flex-col justify-between">
         <div>
-          <div className="h-14 pl-4 pr-3 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80">
+          <div className="h-14 pl-4 pr-3 flex items-center justify-between border-b border-[#e5e3dc] dark:border-slate-800/80">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white shadow-sm font-display font-bold text-sm tracking-tight">
+              <div className="w-7 h-7 rounded-lg bg-[#234aff] flex items-center justify-center text-white shadow-xs font-display font-bold text-sm tracking-tight">
                 JT
               </div>
               <div className="flex flex-col">
                 <span className="font-display text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-none">
                   Job Tracker
                 </span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono tracking-tight mt-0.5">
+                <span className="text-[10px] text-stone-400 dark:text-slate-500 font-mono tracking-tight mt-0.5">
                   v2.0 · personal
                 </span>
               </div>
@@ -99,7 +99,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               title="Close sidebar"
               aria-label="Close sidebar"
               aria-expanded={sidebarOpen}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-[#eeece6] dark:hover:bg-slate-800/60 transition-colors"
             >
               <PanelLeftClose className="w-4 h-4" />
             </button>
@@ -116,21 +116,21 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   onClick={() => onSelectTab(item.id)}
                   className={`w-full flex items-center justify-between px-3 py-2 text-[13px] rounded-lg transition-all whitespace-nowrap ${
                     isActive
-                      ? 'bg-blue-50/90 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 font-semibold border-l-[3px] border-blue-600 dark:border-blue-500 pl-2.5'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 font-medium border-l-[3px] border-transparent'
+                      ? 'bg-[#234aff]/10 dark:bg-blue-950/40 text-[#234aff] dark:text-blue-400 font-semibold border-l-[3px] border-[#234aff] dark:border-blue-500 pl-2.5'
+                      : 'text-stone-600 dark:text-slate-400 hover:bg-[#eeece6]/60 dark:hover:bg-slate-800/50 hover:text-stone-900 dark:hover:text-slate-200 font-medium border-l-[3px] border-transparent'
                   }`}
                 >
                   <span className="flex items-center gap-2.5">
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}`} />
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#234aff] dark:text-blue-400' : 'text-stone-400 dark:text-slate-500'}`} />
                     <span>{item.label}</span>
                   </span>
                   {item.id === 'alerts' && relevantAlertsCount > 0 && (
-                    <span className="font-mono-tabular text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                    <span className="font-mono-tabular text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-[#234aff]/10 dark:bg-blue-900/60 text-[#234aff] dark:text-blue-300">
                       {relevantAlertsCount}
                     </span>
                   )}
                   {item.id === 'interviews' && upcomingInterviewsCount > 0 && (
-                    <span className="font-mono-tabular text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                    <span className="font-mono-tabular text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-[#eeece6] dark:bg-slate-800 text-stone-700 dark:text-slate-400">
                       {upcomingInterviewsCount}
                     </span>
                   )}
@@ -140,9 +140,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           </nav>
         </div>
 
-        <div className="p-3 border-t border-slate-200/80 dark:border-slate-800/80 space-y-3">
+        <div className="p-3 border-t border-[#e5e3dc] dark:border-slate-800/80 space-y-3">
           {/* Theme switcher */}
-          <div className="flex items-center justify-between bg-slate-100/80 dark:bg-slate-900/80 rounded-lg p-1 border border-slate-200/60 dark:border-slate-800/80">
+          <div className="flex items-center justify-between bg-[#eeece6]/80 dark:bg-slate-900/80 rounded-lg p-1 border border-[#e5e3dc] dark:border-slate-800/80">
             <button
               type="button"
               onClick={() => onSelectTheme?.('light')}
@@ -185,7 +185,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           </div>
 
           {imap?.connected ? (
-            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-800/80 space-y-1.5">
+            <div className="p-2.5 rounded-lg bg-[#f6f5f2] dark:bg-slate-900/50 border border-[#e5e3dc] dark:border-slate-800/80 space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs" />
@@ -213,7 +213,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               <button
                 type="button"
                 onClick={onOpenImapModal}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 rounded-lg shadow-sm transition-all"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-[#234aff] hover:bg-[#1938d8] rounded-lg shadow-xs transition-colors"
               >
                 <Mail className="w-3.5 h-3.5" />
                 Connect Email
@@ -260,7 +260,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenImapModal,
 }) => {
   return (
-    <header className="h-14 px-6 bg-white dark:bg-[#111622] border-b border-slate-200/90 dark:border-slate-800/90 flex items-center justify-between gap-6 transition-colors">
+    <header className="h-14 px-6 bg-[#fcfbf9] dark:bg-[#111622] border-b border-[#e5e3dc] dark:border-slate-800/90 flex items-center justify-between gap-6 transition-colors">
       <div className="flex items-center gap-3 min-w-0">
         {!sidebarOpen && (
           <button
@@ -269,7 +269,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             title="Open sidebar"
             aria-label="Open sidebar"
             aria-expanded={false}
-            className="p-1.5 -ml-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+            className="p-1.5 -ml-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-[#eeece6] dark:hover:bg-slate-800 transition-colors shrink-0"
           >
             <PanelLeftOpen className="w-4 h-4" />
           </button>
@@ -281,7 +281,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {lastSyncAt && (
             <span
               title={formatLocalDateTimeTooltip(lastSyncAt)}
-              className="hidden sm:inline text-xs text-slate-400 dark:text-slate-500 font-mono-tabular truncate"
+              className="hidden sm:inline text-xs text-stone-400 dark:text-slate-500 font-mono-tabular truncate"
             >
               Last sync {formatLocalDateTime(lastSyncAt)}
             </span>
@@ -293,7 +293,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   ? `Schedule: ${autoSyncCron} · Next run: ${new Date(nextAutoSyncAt).toLocaleString()}`
                   : `Schedule: ${autoSyncCron}`
               }
-              className="hidden md:inline text-xs text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap"
+              className="hidden md:inline text-xs text-[#234aff] dark:text-blue-400 font-medium whitespace-nowrap"
             >
               Auto: {describeCron(autoSyncCron)}
             </span>
@@ -307,7 +307,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           title="How far back to check emails"
           value={syncDays}
           onChange={(e) => onChangeSyncDays(Number(e.target.value))}
-          className="px-2.5 py-1.5 text-xs bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700/80 rounded-lg text-slate-700 dark:text-slate-300 focus:border-blue-600 dark:focus:border-blue-500 focus:outline-none shadow-2xs"
+          className="px-2.5 py-1.5 text-xs bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700/80 rounded-lg text-slate-700 dark:text-slate-300 focus:border-[#234aff] focus:outline-none shadow-2xs"
         >
           <option value={1}>Last 1 day</option>
           <option value={3}>Last 3 days</option>
@@ -318,7 +318,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <button
           type="button"
           onClick={onOpenAddApp}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-[#182030] border border-slate-200 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 shadow-2xs transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700/80 hover:bg-[#f6f5f2] dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 shadow-2xs transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
           Add Job
@@ -329,7 +329,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             type="button"
             onClick={onSyncInbox}
             disabled={syncing}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 rounded-lg whitespace-nowrap shrink-0 disabled:opacity-60 shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-[#234aff] hover:bg-[#1938d8] rounded-lg whitespace-nowrap shrink-0 disabled:opacity-60 shadow-xs transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? 'Syncing...' : 'Sync Inbox'}
@@ -338,7 +338,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <button
             type="button"
             onClick={onOpenImapModal}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 rounded-lg whitespace-nowrap shrink-0 shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-[#234aff] hover:bg-[#1938d8] rounded-lg whitespace-nowrap shrink-0 shadow-xs transition-colors"
           >
             <Mail className="w-3.5 h-3.5" />
             Connect Email

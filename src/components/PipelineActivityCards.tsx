@@ -6,12 +6,13 @@ export const FUNNEL_STAGE_BARS: {
   label: string;
   barClass: string;
   textClass: string;
+  dotClass: string;
 }[] = [
-  { key: 'applied', label: 'Applied', barClass: 'bg-slate-500 dark:bg-slate-400', textClass: 'text-slate-700 dark:text-slate-300' },
-  { key: 'interviewing', label: 'Interviewing', barClass: 'bg-blue-600 dark:bg-blue-500', textClass: 'text-blue-700 dark:text-blue-400' },
-  { key: 'offer', label: 'Offer', barClass: 'bg-emerald-600 dark:bg-emerald-500', textClass: 'text-emerald-700 dark:text-emerald-400' },
-  { key: 'rejected', label: 'Rejected', barClass: 'bg-rose-500 dark:bg-rose-400', textClass: 'text-rose-700 dark:text-rose-400' },
-  { key: 'ghosted', label: 'Ghosted (10d+)', barClass: 'bg-amber-500 dark:bg-amber-400', textClass: 'text-amber-700 dark:text-amber-400' },
+  { key: 'applied', label: 'Applied', barClass: 'bg-[#3c3f4a]', textClass: 'text-[#3c3f4a]', dotClass: 'bg-[#3c3f4a]' },
+  { key: 'interviewing', label: 'Interviewing', barClass: 'bg-[#234aff]', textClass: 'text-[#234aff]', dotClass: 'bg-[#234aff]' },
+  { key: 'offer', label: 'Offer', barClass: 'bg-[#107e3e]', textClass: 'text-[#107e3e]', dotClass: 'bg-[#107e3e]' },
+  { key: 'rejected', label: 'Rejected', barClass: 'bg-[#c53030]', textClass: 'text-[#c53030]', dotClass: 'bg-[#c53030]' },
+  { key: 'ghosted', label: 'Ghosted (10d+)', barClass: 'bg-[#b46500]', textClass: 'text-[#b46500]', dotClass: 'bg-[#b46500]' },
 ];
 
 interface ApplicationsByStageCardProps {
@@ -23,15 +24,15 @@ export const ApplicationsByStageCard: React.FC<ApplicationsByStageCardProps> = (
   funnel,
   onSelectStage,
 }) => (
-  <section className="rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#131926] p-5 space-y-4 shadow-2xs">
+  <section className="studio-card rounded-2xl p-6 space-y-5">
     <div className="flex items-center justify-between gap-3">
       <div>
-        <h3 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">Applications by Stage</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          Click any stage to filter those applications.
+        <h3 className="text-sm font-bold tracking-tight text-[#12141d] font-display">Applications by Stage</h3>
+        <p className="text-xs text-[#58554d] mt-0.5">
+          Select any stage to filter those applications.
         </p>
       </div>
-      <span className="font-mono-tabular text-xs text-slate-400 dark:text-slate-500">
+      <span className="font-mono-tabular text-xs text-[#58554d] px-2.5 py-1 rounded-full bg-[#eeece6] border border-[#e5e3dc] font-semibold">
         {funnel.total_applications} total
       </span>
     </div>
@@ -50,18 +51,19 @@ export const ApplicationsByStageCard: React.FC<ApplicationsByStageCardProps> = (
             key={stage.key}
             type="button"
             onClick={() => onSelectStage(stage.key)}
-            className="w-full text-left group rounded-lg p-2 -mx-2 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors"
+            className="w-full text-left group rounded-xl p-2.5 -mx-2 hover:bg-[#f6f5f2] transition-all border border-transparent hover:border-[#e5e3dc]"
           >
             <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className={`font-semibold ${stage.textClass}`}>
+              <span className={`font-bold flex items-center gap-2 ${stage.textClass}`}>
+                <span className={`w-2 h-2 rounded-full ${stage.dotClass}`} />
                 {stage.label}
               </span>
-              <span className="font-mono-tabular text-slate-600 dark:text-slate-400">
-                <span className="font-semibold text-slate-900 dark:text-slate-100">{count}</span>{' '}
-                <span className="text-slate-400 dark:text-slate-500">({pct}%)</span>
+              <span className="font-mono-tabular text-[#58554d]">
+                <strong className="text-[#12141d] font-bold">{count}</strong>{' '}
+                <span className="text-[#8e8a7f]">({pct}%)</span>
               </span>
             </div>
-            <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800/80 overflow-hidden">
+            <div className="h-2.5 w-full rounded-full bg-[#eeece6] overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-300 ${stage.barClass}`}
                 style={{ width: `${barWidth}%` }}
@@ -123,71 +125,72 @@ export const ApplicationPaceCard: React.FC<ApplicationPaceCardProps> = ({
   }, [paceSeries, hoveredKey]);
 
   return (
-    <section className="rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#131926] p-5 flex flex-col justify-between space-y-4 shadow-2xs">
+    <section className="studio-card rounded-2xl p-6 flex flex-col justify-between space-y-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+          <h3 className="text-sm font-bold tracking-tight text-[#12141d] font-display">
             {paceMode === 'daily'
               ? `Applications per Day (${paceSeries.length}d)`
               : 'Applications per Week (12w)'}
           </h3>
-          <div className="mt-0.5 h-5 flex items-center text-xs font-mono-tabular text-slate-500 dark:text-slate-400 whitespace-nowrap overflow-hidden">
+          <div className="mt-0.5 h-5 flex items-center text-xs font-mono-tabular text-[#58554d] whitespace-nowrap overflow-hidden">
             {activeHoveredPoint ? (
-              <span className="text-blue-600 dark:text-blue-400 font-semibold truncate">
+              <span className="text-[#234aff] font-bold truncate flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#234aff]" />
                 {activeHoveredPoint.tooltipPrefix} {activeHoveredPoint.label}:{' '}
-                <strong className="text-slate-900 dark:text-slate-100">{activeHoveredPoint.count}</strong> applied
+                <strong className="text-[#12141d]">{activeHoveredPoint.count}</strong> applied
               </span>
             ) : paceMode === 'daily' ? (
               <div className="flex items-center gap-2 truncate">
                 <span>
-                  Today: <strong className="text-slate-900 dark:text-slate-100">{dailyPaceSummary.today_count}</strong>
+                  Today: <strong className="text-[#12141d]">{dailyPaceSummary.today_count}</strong>
                 </span>
-                <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">
+                <span aria-hidden="true" className="text-[#e5e3dc]">
                   ·
                 </span>
                 <span>
-                  Avg: <strong className="text-slate-900 dark:text-slate-100">{dailyPaceSummary.avg_per_day}/d</strong>
+                  Avg: <strong className="text-[#12141d]">{dailyPaceSummary.avg_per_day}/d</strong>
                 </span>
-                <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">
+                <span aria-hidden="true" className="text-[#e5e3dc]">
                   ·
                 </span>
                 <span>
-                  Peak: <strong className="text-slate-900 dark:text-slate-100">{dailyPaceSummary.peak_count}</strong>
+                  Peak: <strong className="text-[#12141d]">{dailyPaceSummary.peak_count}</strong>
                 </span>
               </div>
             ) : (
               <div className="flex items-center gap-2 truncate">
                 <span>
-                  This wk: <strong className="text-slate-900 dark:text-slate-100">{weeklyPaceSummary.this_week_count}</strong>
+                  This wk: <strong className="text-[#12141d]">{weeklyPaceSummary.this_week_count}</strong>
                 </span>
-                <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">
+                <span aria-hidden="true" className="text-[#e5e3dc]">
                   ·
                 </span>
                 <span>
-                  Avg: <strong className="text-slate-900 dark:text-slate-100">{weeklyPaceSummary.avg_per_week}/wk</strong>
+                  Avg: <strong className="text-[#12141d]">{weeklyPaceSummary.avg_per_week}/wk</strong>
                 </span>
-                <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">
+                <span aria-hidden="true" className="text-[#e5e3dc]">
                   ·
                 </span>
                 <span>
-                  Peak: <strong className="text-slate-900 dark:text-slate-100">{weeklyPaceSummary.peak_count}</strong>
+                  Peak: <strong className="text-[#12141d]">{weeklyPaceSummary.peak_count}</strong>
                 </span>
               </div>
             )}
           </div>
         </div>
 
-        <div className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-900/80 rounded-lg border border-slate-200/60 dark:border-slate-800 shrink-0">
+        <div className="inline-flex items-center gap-1 p-1 bg-[#eeece6] rounded-xl border border-[#e5e3dc] shrink-0">
           <button
             type="button"
             onClick={() => {
               onChangePaceMode('daily');
               setHoveredKey(null);
             }}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
               paceMode === 'daily'
-                ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-slate-100 shadow-2xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                ? 'bg-white text-[#12141d] shadow-xs border border-[#e5e3dc]'
+                : 'text-[#58554d] hover:text-[#12141d]'
             }`}
           >
             Daily
@@ -198,10 +201,10 @@ export const ApplicationPaceCard: React.FC<ApplicationPaceCardProps> = ({
               onChangePaceMode('weekly');
               setHoveredKey(null);
             }}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
               paceMode === 'weekly'
-                ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-slate-100 shadow-2xs'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                ? 'bg-white text-[#12141d] shadow-xs border border-[#e5e3dc]'
+                : 'text-[#58554d] hover:text-[#12141d]'
             }`}
           >
             Weekly
@@ -210,7 +213,7 @@ export const ApplicationPaceCard: React.FC<ApplicationPaceCardProps> = ({
       </div>
 
       <div className="pt-2">
-        <div className="h-44 flex items-end gap-1.5 border-b border-slate-100 dark:border-slate-800/80 pb-1">
+        <div className="h-44 flex items-end gap-1.5 border-b border-[#e5e3dc] pb-1">
           {paceSeries.map((pt, idx) => {
             const heightPct =
               pt.count > 0 ? Math.max(8, Math.round((pt.count / maxPaceCount) * 100)) : 3;
@@ -225,18 +228,18 @@ export const ApplicationPaceCard: React.FC<ApplicationPaceCardProps> = ({
               >
                 <span
                   className={`font-mono-tabular text-[10px] mb-1 transition-colors ${
-                    pt.count > 0 ? 'text-slate-700 dark:text-slate-300 font-semibold' : 'text-slate-300 dark:text-slate-600'
+                    pt.count > 0 ? 'text-[#12141d] font-bold' : 'text-[#8e8a7f]/50'
                   }`}
                 >
                   {pt.count}
                 </span>
                 <div
-                  className={`w-full rounded-t-sm transition-all duration-200 ${
+                  className={`w-full rounded-t-md transition-all duration-200 ${
                     pt.count === 0
-                      ? 'bg-slate-100 dark:bg-slate-800/50'
+                      ? 'bg-[#eeece6]'
                       : isCurrent
-                      ? 'bg-blue-600 dark:bg-blue-500 group-hover:bg-blue-700'
-                      : 'bg-slate-600 dark:bg-slate-500 group-hover:bg-blue-500'
+                      ? 'bg-[#234aff] group-hover:bg-[#1938d8]'
+                      : 'bg-[#12141d] group-hover:bg-[#234aff]'
                   }`}
                   style={{ height: `${heightPct}%` }}
                 />
@@ -253,7 +256,7 @@ export const ApplicationPaceCard: React.FC<ApplicationPaceCardProps> = ({
             return (
               <div
                 key={pt.key}
-                className="flex-1 text-center font-mono-tabular text-[10px] text-slate-400 dark:text-slate-500 truncate"
+                className="flex-1 text-center font-mono-tabular text-[10px] text-[#8e8a7f] truncate font-medium"
               >
                 {showLabel ? pt.axisLabel : ''}
               </div>
