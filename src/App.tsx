@@ -55,11 +55,11 @@ import type {
 } from './types';
 
 const STAGE_TONE: Record<ApplicationStatus, string> = {
-  applied: 'text-slate-700',
-  interviewing: 'text-blue-700',
-  offer: 'text-emerald-700',
-  rejected: 'text-rose-700',
-  ghosted: 'text-amber-700',
+  applied: 'text-[#4f46e5]',
+  interviewing: 'text-[#234aff]',
+  offer: 'text-[#107e3e]',
+  rejected: 'text-[#be123c]',
+  ghosted: 'text-[#78716c]',
 };
 
 export default function App() {
@@ -909,27 +909,27 @@ export default function App() {
           ) : activeTab === 'applications' ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
                   <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <Search className="w-3.5 h-3.5 text-[#8e8a7f] absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={appSearch}
                       onChange={(e) => setAppSearch(e.target.value)}
                       placeholder="Search company, role, source..."
-                      className="pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 w-60 focus:border-blue-600 focus:outline-none shadow-2xs"
+                      className="pl-8 pr-3 py-1 text-xs bg-white dark:bg-[#131926] border border-[#e5e3dc] dark:border-slate-700 rounded-lg text-[#12141d] dark:text-slate-200 w-44 sm:w-52 focus:border-[#234aff] focus:outline-none shadow-2xs font-medium"
                     />
                   </div>
 
                   {appViewMode === 'table' && (
-                    <div className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-900/80 rounded-lg border border-slate-200/60 dark:border-slate-800">
+                    <div className="inline-flex items-center gap-0.5 p-0.5 bg-[#eeece6] dark:bg-slate-900/80 rounded-lg border border-[#e5e3dc] dark:border-slate-800">
                       <button
                         type="button"
                         onClick={() => setAppStatusFilter('all')}
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
+                        className={`px-2 py-0.5 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
                           appStatusFilter === 'all'
-                            ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-2xs'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                            ? 'bg-white dark:bg-[#1c2436] text-[#12141d] dark:text-white shadow-2xs font-bold'
+                            : 'text-[#58554d] dark:text-slate-400 hover:text-[#12141d] dark:hover:text-slate-200'
                         }`}
                       >
                         All
@@ -939,10 +939,10 @@ export default function App() {
                           key={st.key}
                           type="button"
                           onClick={() => setAppStatusFilter(st.key)}
-                          className={`px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
+                          className={`px-2 py-0.5 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
                             appStatusFilter === st.key
-                              ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-2xs'
-                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                              ? 'bg-white dark:bg-[#1c2436] text-[#12141d] dark:text-white shadow-2xs font-bold'
+                              : 'text-[#58554d] dark:text-slate-400 hover:text-[#12141d] dark:hover:text-slate-200'
                           }`}
                         >
                           {st.label}
@@ -955,17 +955,17 @@ export default function App() {
                     type="button"
                     onClick={() => setAppStaleOnly((v) => !v)}
                     title="Show applications unchanged for 10+ days (auto-moved to Ghosted)"
-                    className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border whitespace-nowrap transition-colors shadow-2xs ${
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg border whitespace-nowrap transition-colors shadow-2xs ${
                       appStaleOnly
                         ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300'
-                        : 'bg-white dark:bg-[#131926] border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        : 'bg-white dark:bg-[#131926] border-[#e5e3dc] dark:border-slate-700 text-[#58554d] dark:text-slate-300 hover:bg-[#f6f5f2] dark:hover:bg-slate-800'
                     }`}
                   >
                     Follow-up 10d+ ({staleAppCount})
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {applications.length > 0 && (
                     <button
                       type="button"
@@ -980,7 +980,7 @@ export default function App() {
                           ),
                         })
                       }
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-white dark:bg-[#131926] border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg whitespace-nowrap shadow-2xs transition-colors"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-[#be123c] dark:text-rose-300 bg-white dark:bg-[#131926] border border-[#be123c]/30 hover:bg-[#be123c]/10 rounded-lg whitespace-nowrap shadow-2xs transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Batch Delete
@@ -991,20 +991,20 @@ export default function App() {
                     type="button"
                     onClick={handleExportAppsCsv}
                     disabled={filteredApps.length === 0}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg whitespace-nowrap disabled:opacity-50 shadow-2xs transition-colors"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-[#12141d] dark:text-slate-300 bg-white dark:bg-[#131926] border border-[#e5e3dc] dark:border-slate-700 hover:bg-[#f6f5f2] dark:hover:bg-slate-800 rounded-lg whitespace-nowrap disabled:opacity-50 shadow-2xs transition-colors"
                   >
                     <Download className="w-3.5 h-3.5" />
                     Export CSV
                   </button>
 
-                  <div className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-900/80 rounded-lg border border-slate-200/60 dark:border-slate-800">
+                  <div className="inline-flex items-center gap-0.5 p-0.5 bg-[#eeece6] dark:bg-slate-900/80 rounded-lg border border-[#e5e3dc] dark:border-slate-800 shrink-0">
                     <button
                       type="button"
                       onClick={() => setAppViewMode('kanban')}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
                         appViewMode === 'kanban'
-                          ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-2xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                          ? 'bg-white dark:bg-[#1c2436] text-[#12141d] dark:text-white shadow-2xs font-bold'
+                          : 'text-[#58554d] dark:text-slate-400 hover:text-[#12141d] dark:hover:text-slate-200'
                       }`}
                     >
                       <Columns3 className="w-3.5 h-3.5" />
@@ -1013,10 +1013,10 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setAppViewMode('table')}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
                         appViewMode === 'table'
-                          ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-2xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                          ? 'bg-white dark:bg-[#1c2436] text-[#12141d] dark:text-white shadow-2xs font-bold'
+                          : 'text-[#58554d] dark:text-slate-400 hover:text-[#12141d] dark:hover:text-slate-200'
                       }`}
                     >
                       <Table2 className="w-3.5 h-3.5" />
@@ -1027,12 +1027,12 @@ export default function App() {
               </div>
 
               {filteredApps.length === 0 ? (
-                <div className="rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#131926] p-10 text-center shadow-2xs">
-                  <ListFilter className="w-6 h-6 text-slate-400 dark:text-slate-500 mx-auto mb-2.5" />
-                  <h3 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                <div className="rounded-2xl border border-[#e5e3dc] dark:border-slate-800 bg-white dark:bg-[#131926] p-12 text-center shadow-2xs">
+                  <ListFilter className="w-7 h-7 text-[#8e8a7f] mx-auto mb-3" />
+                  <h3 className="text-sm font-bold tracking-tight text-[#12141d] dark:text-slate-100 font-display">
                     No matching applications
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  <p className="text-xs text-[#58554d] dark:text-slate-400 mt-1">
                     Adjust your search/filter or add a new application.
                   </p>
                 </div>

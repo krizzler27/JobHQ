@@ -8,11 +8,11 @@ export const FUNNEL_STAGE_BARS: {
   textClass: string;
   dotClass: string;
 }[] = [
-  { key: 'applied', label: 'Applied', barClass: 'bg-[#3c3f4a]', textClass: 'text-[#3c3f4a]', dotClass: 'bg-[#3c3f4a]' },
+  { key: 'applied', label: 'Applied', barClass: 'bg-[#4f46e5]', textClass: 'text-[#4f46e5]', dotClass: 'bg-[#4f46e5]' },
   { key: 'interviewing', label: 'Interviewing', barClass: 'bg-[#234aff]', textClass: 'text-[#234aff]', dotClass: 'bg-[#234aff]' },
   { key: 'offer', label: 'Offer', barClass: 'bg-[#107e3e]', textClass: 'text-[#107e3e]', dotClass: 'bg-[#107e3e]' },
-  { key: 'rejected', label: 'Rejected', barClass: 'bg-[#c53030]', textClass: 'text-[#c53030]', dotClass: 'bg-[#c53030]' },
-  { key: 'ghosted', label: 'Ghosted (10d+)', barClass: 'bg-[#b46500]', textClass: 'text-[#b46500]', dotClass: 'bg-[#b46500]' },
+  { key: 'rejected', label: 'Rejected', barClass: 'bg-[#be123c]', textClass: 'text-[#be123c]', dotClass: 'bg-[#be123c]' },
+  { key: 'ghosted', label: 'Ghosted (10d+)', barClass: 'bg-[#78716c]', textClass: 'text-[#78716c]', dotClass: 'bg-[#78716c]' },
 ];
 
 interface ApplicationsByStageCardProps {
