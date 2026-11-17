@@ -209,8 +209,7 @@ class JobAlertRepository(BaseRepository[JobAlert]):
         iv_dict: dict | None = None
 
         if target == "application":
-            raw_status = str(payload.get("status") or "applied").strip()
-            status = "applied" if raw_status == "screening" else raw_status
+            status = str(payload.get("status") or "applied").strip()
             if status not in VALID_APP_STATUSES:
                 status = "applied"
 

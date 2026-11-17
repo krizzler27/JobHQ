@@ -118,8 +118,6 @@ class ApplicationRepository(BaseRepository[Application]):
         today = ts[:10]
 
         requested_status = payload.get("status")
-        if requested_status == "screening":
-            requested_status = "applied"
         if requested_status in VALID_APP_STATUSES:
             if not (
                 preserve_progressed_stage
@@ -151,8 +149,6 @@ class ApplicationRepository(BaseRepository[Application]):
         ts = now_iso()
         today = ts[:10]
         status = payload.get("status", "applied")
-        if status == "screening":
-            status = "applied"
         if status not in VALID_APP_STATUSES:
             status = "applied"
         app = Application(
@@ -184,7 +180,7 @@ class ApplicationRepository(BaseRepository[Application]):
             app.company = str(payload["company"]).strip()
         if "role_title" in payload and str(payload["role_title"]).strip():
             app.role_title = str(payload["role_title"]).strip()
-        next_status = "applied" if payload.get("status") == "screening" else payload.get("status")
+        next_status = payload.get("status")
         if next_status in VALID_APP_STATUSES:
             app.status = next_status
         for field in (
@@ -231,12 +227,12 @@ class ApplicationRepository(BaseRepository[Application]):
         return len(rows)
 
     def auto_ghost_stale(self, days_threshold: int = 10) -> int:
-        """Moves Applied (or legacy Screening) applications with no update for 10+ days to Ghosted."""
+        """Moves Applied applications with no update for 10+ days to Ghosted."""
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days_threshold)).strftime("%Y-%m-%d")
         ts = now_iso()
         rows = list(
             self.session.scalars(
-                select(Application).where(Application.status.in_(("applied", "screening")))
+                select(Application).where(Application.status == "applied")
             )
         )
         moved = 0
@@ -246,9 +242,6 @@ class ApplicationRepository(BaseRepository[Application]):
                 app.status = "ghosted"
                 app.updated_at = ts
                 moved += 1
-            elif app.status == "screening":
-                app.status = "applied"
-                app.updated_at = ts
-        if moved or any(r.status == "applied" for r in rows):
+        if moved:
             self.session.flush()
         return moved
