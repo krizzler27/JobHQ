@@ -5,11 +5,12 @@ import threading
 import urllib.request
 from typing import Callable
 
+from backend.core.config import config
 from backend.llm.prompts import RECOMMENDED_SLMS
 
 
 def get_models_dir() -> str:
-    return os.path.join(os.getcwd(), "models")
+    return str(config.models_dir)
 
 
 def list_downloaded_models() -> list[dict]:

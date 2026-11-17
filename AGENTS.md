@@ -92,6 +92,7 @@ All development across the full stack must strictly follow these engineering pri
 When working on this codebase, all AI agents must adhere to the following workflow guidelines:
 
 ### A. Git & Permissions Guardrails
+- **File Operations Tooling**: Use native file editing/writing tools for creating or modifying files. Never use bash or powershell commands to create, move, or delete files to avoid file creation, deletion, sandbox, and access issues.
 - **NEVER commit or push without explicit user approval**: Always show what was changed, state modified/created files, and wait for confirmation before staging or committing.
 - **Do Not Commit Working / Roadmap Files**: Temporary planning documents (e.g. `BACKGROUND_JOBS_ROADMAP.md`), scratch notes, or temporary test artifacts must remain strictly untracked.
 - **Clean Commits**: Follow Conventional Commits format (e.g. `feat(backend): ...`, `fix(ui): ...`).

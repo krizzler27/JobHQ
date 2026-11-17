@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.deps import DEFAULT_APP_CONTEXT, AppContext, get_app_context
 from backend.api.routers.registry import register_routers
+from backend.core.config import config
 
 
 def configure_logging() -> None:
@@ -53,8 +54,7 @@ app = create_app()
 
 
 def main() -> None:
-    port = int(os.environ.get("PY_BACKEND_PORT", "3001"))
-    uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
+    uvicorn.run(app, host="127.0.0.1", port=config.port, log_level="info")
 
 
 if __name__ == "__main__":

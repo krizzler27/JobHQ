@@ -5,8 +5,8 @@ import shutil
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from backend.core.config import config
 from backend.core.database import DatabaseManager
-from backend.core.paths import get_default_backups_dir
 from backend.repositories.alerts import JobAlertRepository
 from backend.repositories.applications import ApplicationRepository
 from backend.repositories.interviews import InterviewRepository
@@ -83,7 +83,7 @@ class JobHQLifecycleService:
         if self.db._is_memory or not self.db._db_file or not os.path.isfile(self.db._db_file):
             return ""
 
-        target_dir = backup_dir or get_default_backups_dir()
+        target_dir = backup_dir or config.get_resolved_backups_dir()
         os.makedirs(target_dir, exist_ok=True)
 
         latest_path = os.path.join(target_dir, "jobhq_latest.db")
