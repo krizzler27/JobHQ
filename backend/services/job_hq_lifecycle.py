@@ -1,11 +1,17 @@
-"""Job HQ pipeline lifecycle service orchestrating interview and application transitions."""
+"""Job HQ pipeline lifecycle service orchestrating interview, application, alert, and backup routines."""
 
+import os
+import shutil
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from backend.core.config import config
 from backend.core.database import DatabaseManager
+from backend.repositories.alerts import JobAlertRepository
 from backend.repositories.applications import ApplicationRepository
 from backend.repositories.interviews import InterviewRepository
+from backend.repositories.processed_emails import ProcessedEmailRepository
+from backend.services.backup import BackupRestoreService
 
 
 class JobHQLifecycleService:
@@ -59,3 +65,74 @@ class JobHQLifecycleService:
         with self.db.session_scope() as session:
             repo = ApplicationRepository(session)
             return repo.auto_ghost_stale(days_threshold=days_threshold)
+
+    def cleanup_stale_alerts(self, days_threshold: int = 5, now_dt: Optional[datetime] = None) -> int:
+        """Deletes unreviewed and dismissed job alerts older than days_threshold (default 5 days).
+
+        Preserves all applied or converted alerts.
+        """
+        ref_now = now_dt or datetime.now(timezone.utc)
+        cutoff_date = (ref_now - timedelta(days=max(1, days_threshold))).strftime("%Y-%m-%d")
+
+        with self.db.session_scope() as session:
+            repo = JobAlertRepository(session)
+            return repo.delete_stale_unapplied(cutoff_date)
+
+    def create_latest_backup(self, backup_dir: Optional[str] = None) -> str:
+        """Creates an atomic SQLite snapshot into ~/.jobhq/backups/jobhq_latest.db, rotating prior copy to .bak."""
+        if self.db._is_memory or not self.db._db_file or not os.path.isfile(self.db._db_file):
+            return ""
+
+        target_dir = backup_dir or config.get_resolved_backups_dir()
+        os.makedirs(target_dir, exist_ok=True)
+
+        latest_path = os.path.join(target_dir, "jobhq_latest.db")
+        bak_path = os.path.join(target_dir, "jobhq_latest.db.bak")
+
+        # Rotate existing backup to .bak if present
+        if os.path.isfile(latest_path):
+            try:
+                shutil.copy2(latest_path, bak_path)
+            except Exception:
+                pass
+
+        # Perform zero-lock atomic snapshot
+        BackupRestoreService.create_sqlite_snapshot(self.db, latest_path)
+        return latest_path
+
+    def prune_processed_email_logs(self, days_threshold: int = 7, now_dt: Optional[datetime] = None) -> int:
+        """Prunes raw metadata from processed email audit logs older than days_threshold (default 7 days).
+
+        Preserves message_id hashes and category so deduplication is 100% maintained.
+        """
+        ref_now = now_dt or datetime.now(timezone.utc)
+        cutoff_date = (ref_now - timedelta(days=max(1, days_threshold))).strftime("%Y-%m-%d")
+
+        with self.db.session_scope() as session:
+            repo = ProcessedEmailRepository(session)
+            return repo.prune_older_than(cutoff_date)
+
+    def run_database_maintenance(self) -> dict[str, str]:
+        """Runs SQLite WAL checkpoint and query planner optimization."""
+        results = {"wal_checkpoint": "skipped", "optimize": "skipped"}
+        if self.db._is_memory:
+            return results
+
+        from sqlalchemy import text
+
+        with self.db.engine.connect() as conn:
+            try:
+                # Flush WAL log back into database file
+                row = conn.execute(text("PRAGMA wal_checkpoint(TRUNCATE);")).fetchone()
+                results["wal_checkpoint"] = f"busy={row[0]}, log={row[1]}, checkpointed={row[2]}" if row else "ok"
+            except Exception as e:
+                results["wal_checkpoint"] = f"error: {e}"
+
+            try:
+                # Optimize query planner statistics
+                conn.execute(text("PRAGMA optimize;"))
+                results["optimize"] = "ok"
+            except Exception as e:
+                results["optimize"] = f"error: {e}"
+
+        return results

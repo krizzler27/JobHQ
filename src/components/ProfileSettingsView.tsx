@@ -1,13 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Briefcase,
   CheckCircle2,
   Clock,
   Cpu,
+  Database,
   Filter,
   Mail,
   Plus,
   RotateCcw,
   Save,
+  Sliders,
   X,
 } from 'lucide-react';
 import { api } from '../api';
@@ -17,8 +20,12 @@ import type {
   ProfileSettings,
 } from '../types';
 import { describeCron } from '../utils/appHelpers';
+import { useToast } from '../context/ToastContext';
 import { EmailReaderPanel } from './EmailReaderPanel';
 import { BackupRestoreSection } from './BackupRestoreSection';
+import { BackgroundJobsSection } from './BackgroundJobsSection';
+import { ImapConnectionForm } from './ImapModal';
+import type { WorkerConfig } from '../types';
 
 interface ProfileSettingsViewProps {
   profile: ProfileSettings | null;
@@ -27,6 +34,7 @@ interface ProfileSettingsViewProps {
   onOpenImapModal: () => void;
   onOpenOnboarding: () => void;
   onDataRestored: () => Promise<void>;
+  onRefreshImap?: () => Promise<void>;
 }
 
 const parseList = (raw: string): string[] =>
@@ -65,32 +73,32 @@ export const AutoSyncScheduleEditor: React.FC<AutoSyncScheduleEditorProps> = ({
   onChangeCron,
   onChangeLookbackDays,
 }) => (
-  <div className="space-y-3">
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex items-start gap-2.5">
-        <Clock className="w-4 h-4 text-slate-600 mt-0.5 shrink-0" />
+  <div className="space-y-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#e5e3dc] dark:border-slate-800">
+      <div className="flex items-center gap-2.5">
+        <Clock className="w-4 h-4 text-stone-500 dark:text-slate-400 shrink-0" />
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">Auto-Sync Schedule (Unix Cron)</h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Automatically syncs your inbox in the background using standard 5-field cron syntax while the server is running.
+          <h3 className="text-sm font-semibold text-stone-900 dark:text-slate-100">Auto-Sync Schedule</h3>
+          <p className="text-xs text-stone-500 dark:text-slate-400">
+            Automatically syncs your inbox on a background schedule.
           </p>
         </div>
       </div>
 
-      <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-800 cursor-pointer select-none">
+      <label className="inline-flex items-center gap-2 text-xs font-semibold text-stone-800 dark:text-slate-200 cursor-pointer select-none">
         <input
           type="checkbox"
           checked={enabled}
           onChange={(e) => onChangeEnabled(e.target.checked)}
-          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          className="rounded border-[#e5e3dc] dark:border-slate-600 bg-white dark:bg-slate-800 text-[#234aff] focus:ring-[#234aff]"
         />
-        <span>{enabled ? 'Auto-Sync Enabled' : 'Enable Auto-Sync'}</span>
+        <span>{enabled ? 'Auto-Sync Active' : 'Enable Auto-Sync'}</span>
       </label>
     </div>
 
-    <div className="rounded-md border border-slate-200 bg-slate-50/50 p-4 space-y-3">
+    <div className="rounded-xl border border-[#e5e3dc] dark:border-slate-800 bg-[#f9f8f6] dark:bg-[#0e1420]/70 p-4 space-y-3.5">
       <div>
-        <div className="text-xs font-medium text-slate-700 mb-2">
+        <div className="text-xs font-semibold text-stone-700 dark:text-slate-300 mb-2">
           Quick Schedule Templates
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -105,10 +113,10 @@ export const AutoSyncScheduleEditor: React.FC<AutoSyncScheduleEditorProps> = ({
                   onChangeCron(tpl.cron);
                   if (!enabled) onChangeEnabled(true);
                 }}
-                className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+                className={`px-2.5 py-1 text-xs rounded-lg border transition-all ${
                   active
-                    ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium'
-                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                    ? 'bg-[#234aff] border-[#234aff] text-white font-semibold shadow-xs'
+                    : 'bg-white dark:bg-[#182030] border-[#e5e3dc] dark:border-slate-700 text-stone-700 dark:text-slate-300 hover:bg-stone-50 dark:hover:bg-slate-800 font-medium'
                 }`}
               >
                 {tpl.label}
@@ -120,31 +128,29 @@ export const AutoSyncScheduleEditor: React.FC<AutoSyncScheduleEditorProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-slate-700 mb-1">
-            Unix Cron Expression (min hour day month weekday)
+          <label className="block text-xs font-medium text-stone-700 dark:text-slate-300 mb-1">
+            Cron Expression (min hour day month weekday)
           </label>
           <input
             type="text"
             value={cron}
             onChange={(e) => onChangeCron(e.target.value)}
             placeholder="0 */4 * * *"
-            className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 font-mono-tabular text-xs focus:border-blue-600 focus:outline-none"
+            className="w-full rounded-xl border border-[#e5e3dc] dark:border-slate-700 bg-white dark:bg-[#182030] px-3 py-2 font-mono-tabular text-xs text-stone-800 dark:text-slate-200 focus:border-[#234aff] focus:ring-1 focus:ring-[#234aff] focus:outline-none"
           />
-          <p className="text-[11px] text-slate-500 mt-1">
-            Schedule: <span className="font-medium text-blue-700">{describeCron(cron)}</span>
-            {' · '}
-            <span className="font-mono-tabular">min hr day month weekday</span>
+          <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-1">
+            Runs: <span className="font-semibold text-[#234aff] dark:text-blue-400">{describeCron(cron)}</span>
           </p>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-700 mb-1">
-            Auto-Sync Lookback
+          <label className="block text-xs font-medium text-stone-700 dark:text-slate-300 mb-1">
+            Lookback Range
           </label>
           <select
             value={lookbackDays}
             onChange={(e) => onChangeLookbackDays(Number(e.target.value))}
-            className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-blue-600 focus:outline-none"
+            className="w-full rounded-xl border border-[#e5e3dc] dark:border-slate-700 bg-white dark:bg-[#182030] px-3 py-2 text-xs text-stone-800 dark:text-slate-200 focus:border-[#234aff] focus:ring-1 focus:ring-[#234aff] focus:outline-none"
           >
             <option value={1}>Last 24 hours</option>
             <option value={3}>Last 3 days</option>
@@ -153,8 +159,8 @@ export const AutoSyncScheduleEditor: React.FC<AutoSyncScheduleEditorProps> = ({
             <option value={30}>Last 30 days</option>
           </select>
           {enabled && nextRunAt && (
-            <p className="text-[11px] text-emerald-700 mt-1 font-mono-tabular">
-              Next run: {new Date(nextRunAt).toLocaleString()}
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1 font-mono-tabular font-medium">
+              Next: {new Date(nextRunAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
             </p>
           )}
         </div>
@@ -202,13 +208,13 @@ export const FilterKeywordEditor: React.FC<FilterKeywordEditorProps> = ({
   };
 
   return (
-    <div className="rounded-md border border-slate-200 bg-slate-50/50 p-3.5 space-y-2.5">
+    <div className="rounded-xl border border-[#e5e3dc] dark:border-slate-800 bg-[#f9f8f6] dark:bg-[#0e1420]/70 p-4 space-y-2.5">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <div className="text-xs font-semibold text-slate-800">{label}</div>
-          <p className="text-[11px] text-slate-500">{helper}</p>
+          <div className="text-xs font-semibold text-stone-800 dark:text-slate-200">{label}</div>
+          <p className="text-[11px] text-stone-500 dark:text-slate-400">{helper}</p>
         </div>
-        <span className="font-mono-tabular text-[11px] text-slate-500 shrink-0">
+        <span className="font-mono-tabular text-[11px] text-stone-500 dark:text-slate-400 shrink-0">
           {items.length} {items.length === 1 ? 'term' : 'terms'}
         </span>
       </div>
@@ -225,13 +231,13 @@ export const FilterKeywordEditor: React.FC<FilterKeywordEditorProps> = ({
             }
           }}
           placeholder={placeholder}
-          className="flex-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-600 focus:outline-none"
+          className="flex-1 rounded-xl border border-[#e5e3dc] dark:border-slate-700 bg-white dark:bg-[#182030] px-3 py-1.5 text-xs text-stone-800 dark:text-slate-200 focus:border-[#234aff] focus:ring-1 focus:ring-[#234aff] focus:outline-none"
         />
         <button
           type="button"
           onClick={addDraftItems}
           disabled={!draft.trim()}
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 rounded-md whitespace-nowrap shrink-0 disabled:opacity-50"
+          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl whitespace-nowrap shrink-0 disabled:opacity-50 transition-colors shadow-2xs"
         >
           <Plus className="w-3.5 h-3.5" />
           Add
@@ -239,16 +245,16 @@ export const FilterKeywordEditor: React.FC<FilterKeywordEditorProps> = ({
       </div>
 
       {items.length === 0 ? (
-        <p className="text-[11px] text-slate-400 py-1">No keywords set.</p>
+        <p className="text-[11px] text-stone-400 dark:text-slate-500 py-1">No keywords set.</p>
       ) : (
         <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pt-0.5">
           {items.map((item, idx) => (
             <span
               key={`${item}-${idx}`}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded border ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border ${
                 tone === 'danger'
-                  ? 'bg-rose-50 text-rose-800 border-rose-200'
-                  : 'bg-white text-slate-700 border-slate-200'
+                  ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-900/60'
+                  : 'bg-white dark:bg-[#182030] text-stone-700 dark:text-slate-300 border-[#e5e3dc] dark:border-slate-700'
               }`}
             >
               <span>{item}</span>
@@ -256,7 +262,7 @@ export const FilterKeywordEditor: React.FC<FilterKeywordEditorProps> = ({
                 type="button"
                 onClick={() => removeItem(idx)}
                 aria-label={`Remove ${item}`}
-                className="text-slate-400 hover:text-slate-800 p-0.5"
+                className="text-stone-400 hover:text-stone-800 dark:hover:text-slate-200 p-0.5 transition-colors"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -268,6 +274,8 @@ export const FilterKeywordEditor: React.FC<FilterKeywordEditorProps> = ({
   );
 };
 
+type SettingsTab = 'preferences' | 'email-sync' | 'filters-ai' | 'automation' | 'backup';
+
 export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   profile,
   imapStatus,
@@ -275,7 +283,9 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   onOpenImapModal,
   onOpenOnboarding,
   onDataRestored,
+  onRefreshImap,
 }) => {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('preferences');
   const [targetTitles, setTargetTitles] = useState('');
   const [keywords, setKeywords] = useState('');
   const [excluded, setExcluded] = useState('');
@@ -294,6 +304,42 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   const [savedNotice, setSavedNotice] = useState('');
   const [filterNotice, setFilterNotice] = useState('');
   const [saveError, setSaveError] = useState('');
+
+  const [workers, setWorkers] = useState<WorkerConfig[]>([]);
+  const [loadingWorkers, setLoadingWorkers] = useState(false);
+
+  const { toast } = useToast();
+
+  const loadWorkers = async () => {
+    setLoadingWorkers(true);
+    try {
+      const data = await api.getWorkers();
+      setWorkers(data);
+    } catch {
+      // Background jobs fetch failure is non-fatal
+    } finally {
+      setLoadingWorkers(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'automation') {
+      loadWorkers();
+    }
+  }, [activeTab]);
+
+  const handleUpdateWorker = async (
+    name: string,
+    payload: { interval_minutes?: number; is_enabled?: boolean; threshold_days?: number }
+  ) => {
+    const updated = await api.updateWorker(name, payload);
+    setWorkers((prev) => prev.map((w) => (w.name === name ? updated : w)));
+  };
+
+  const handleRunWorker = async (name: string) => {
+    await api.runWorkerNow(name);
+    await loadWorkers();
+  };
 
   const skipFormSyncRef = useRef(false);
   const filterSaveSeqRef = useRef(0);
@@ -319,8 +365,8 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
     setLlmModelPath(profile.llm_model_path || '');
   }, [profile]);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setSaving(true);
     setSavedNotice('');
     setSaveError('');
@@ -341,8 +387,19 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
       });
       setSavedNotice('Settings saved.');
       setTimeout(() => setSavedNotice(''), 3000);
+      const tabDescription =
+        activeTab === 'preferences'
+          ? 'Your career preferences and target criteria are updated.'
+          : activeTab === 'email-sync'
+            ? 'Your email connection and auto-sync schedule are updated.'
+            : activeTab === 'filters-ai'
+              ? 'Your scan filters and AI model settings are updated.'
+              : 'Your settings have been saved successfully.';
+      toast.success('Settings saved', tabDescription);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Could not save settings.');
+      const msg = err instanceof Error ? err.message : 'Could not save settings.';
+      setSaveError(msg);
+      toast.error('Failed to save settings', msg);
     } finally {
       setSaving(false);
     }
@@ -365,6 +422,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
       await onSaveProfile({ [field]: next });
       if (seq === filterSaveSeqRef.current) {
         setFilterNotice('Saved');
+        toast.success('Filters updated', 'Scan filter keywords have been saved.');
         if (filterNoticeTimerRef.current) {
           window.clearTimeout(filterNoticeTimerRef.current);
         }
@@ -397,6 +455,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
         scan_exclude_keywords: reset.scan_exclude_keywords || [],
       });
       setFilterNotice('Reset to defaults');
+      toast.info('Filters reset', 'Scan filters were restored to recommended defaults.');
       if (filterNoticeTimerRef.current) {
         window.clearTimeout(filterNoticeTimerRef.current);
       }
@@ -409,252 +468,348 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
     }
   };
 
+  const tabs: { id: SettingsTab; label: string; icon: React.FC<{ className?: string }> }[] = [
+    { id: 'preferences', label: 'Job Preferences', icon: Briefcase },
+    { id: 'email-sync', label: 'Email Connection', icon: Mail },
+    { id: 'filters-ai', label: 'Scan Filters & AI', icon: Sliders },
+    { id: 'automation', label: 'Background Jobs', icon: Cpu },
+    { id: 'backup', label: 'Backups & Data', icon: Database },
+  ];
+
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* Email Connection Card */}
-      <div className="rounded-lg border border-slate-200 bg-white p-5 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <Mail className="w-4 h-4 text-slate-600 mt-0.5 shrink-0" />
+    <div className="space-y-6 max-w-5xl">
+      {/* Header & Sub-Navigation */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">Email Connection</h2>
-            {imapStatus?.connected ? (
-              <p className="text-xs text-slate-600 mt-0.5">
-                Connected to <span className="font-medium text-slate-900">{imapStatus.email}</span>
-                {' · '}
-                <span className="font-mono-tabular">{imapStatus.host}</span>
-              </p>
-            ) : (
-              <p className="text-xs text-slate-500 mt-0.5">
-                Connect Gmail, Outlook, Yahoo, or another email inbox to sync job updates automatically.
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onOpenOnboarding}
-            className="px-3 py-1.5 text-xs font-medium text-slate-700 border border-slate-300 hover:bg-slate-50 rounded-md whitespace-nowrap"
-          >
-            Quick Setup
-          </button>
-          <button
-            type="button"
-            onClick={onOpenImapModal}
-            className="px-3.5 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md whitespace-nowrap"
-          >
-            {imapStatus?.connected ? 'Change Email' : 'Connect Email'}
-          </button>
-        </div>
-      </div>
-
-      {/* Jobs You Want + How Emails Are Read */}
-      <form
-        onSubmit={handleSave}
-        className="rounded-lg border border-slate-200 bg-white p-6 space-y-5"
-      >
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900">Jobs You Want</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Used to rank job alert emails based on your goals and past applications.
+            <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-slate-100 font-display">
+              Settings
+            </h1>
+            <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
+              Manage your career criteria, inbox sync automation, filters, and local backups.
             </p>
           </div>
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md whitespace-nowrap shrink-0 disabled:opacity-60"
-          >
-            <Save className="w-3.5 h-3.5" />
-            {saving ? 'Saving...' : 'Save Settings'}
-          </button>
-        </div>
 
-        {savedNotice && (
-          <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{savedNotice}</span>
-          </div>
-        )}
-
-        {saveError && (
-          <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-md px-3 py-2">
-            <span>{saveError}</span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
-              Target Job Titles (separated by commas)
-            </label>
-            <input
-              type="text"
-              value={targetTitles}
-              onChange={(e) => setTargetTitles(e.target.value)}
-              placeholder="Backend Engineer, Python Developer, Full Stack Engineer"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
-              Skills & Keywords
-            </label>
-            <input
-              type="text"
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-              placeholder="Python, SQL, FastAPI, React"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
-              Words to Skip
-            </label>
-            <input
-              type="text"
-              value={excluded}
-              onChange={(e) => setExcluded(e.target.value)}
-              placeholder="Intern, Director, Sales, PHP"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
-              Preferred Locations
-            </label>
-            <input
-              type="text"
-              value={locations}
-              onChange={(e) => setLocations(e.target.value)}
-              placeholder="Remote, San Francisco, Bengaluru"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="pt-4 border-t border-slate-200">
-          <AutoSyncScheduleEditor
-            enabled={autoSyncEnabled}
-            cron={autoSyncCron}
-            lookbackDays={autoSyncDays}
-            nextRunAt={profile?.next_auto_sync_at}
-            onChangeEnabled={setAutoSyncEnabled}
-            onChangeCron={setAutoSyncCron}
-            onChangeLookbackDays={setAutoSyncDays}
-          />
-        </div>
-
-        <div className="pt-4 border-t border-slate-200 space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex items-start gap-2.5">
-              <Filter className="w-4 h-4 text-slate-600 mt-0.5 shrink-0" />
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">Email Scan Filters (IMAP)</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Filters emails directly on your mail server (IMAP) before fetching content. Changes save automatically when you add or remove a keyword.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2.5 shrink-0">
-              {savingFilters && (
-                <span className="text-xs text-slate-500">Saving...</span>
-              )}
-              {!savingFilters && filterNotice && (
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  {filterNotice}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={handleResetScanFilters}
-                disabled={resettingFilters}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-700 border border-slate-300 hover:bg-slate-50 rounded-md whitespace-nowrap shrink-0 disabled:opacity-60"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                {resettingFilters ? 'Resetting...' : 'Reset Defaults'}
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <FilterKeywordEditor
-              label="Subject Keywords to Scan"
-              helper="Emails whose subject matches any of these words (plus your Target Job Titles) are searched on the mail server."
-              placeholder="Add subject keyword (e.g. technical assessment, referral)..."
-              items={scanSubjectKeywords}
-              onChange={(next) => handleScanFilterChange('scan_subject_keywords', next)}
-            />
-
-            <FilterKeywordEditor
-              label="Sender & Domain Keywords to Scan"
-              helper="Senders or job platforms searched on the mail server (e.g. greenhouse, workday, recruit)."
-              placeholder="Add sender or domain (e.g. wellfound.com, talent@)..."
-              items={scanSenderKeywords}
-              onChange={(next) => handleScanFilterChange('scan_sender_keywords', next)}
-            />
-
-            <FilterKeywordEditor
-              label="Skip / Noise Words (Always Ignore)"
-              helper="Any email whose sender or subject contains these words is always skipped."
-              placeholder="Add word or sender to skip (e.g. newsletter, invoice, substack)..."
-              items={scanExcludeKeywords}
-              onChange={(next) => handleScanFilterChange('scan_exclude_keywords', next)}
-              tone="danger"
-            />
-          </div>
-        </div>
-
-        <div className="pt-4 border-t border-slate-200 space-y-3">
-          <div className="flex items-start gap-2.5">
-            <Cpu className="w-4 h-4 text-slate-600 mt-0.5 shrink-0" />
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900">How Emails Are Read</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Choose the fast built-in reader or download an optional local AI model that stays private on your computer.
-              </p>
-            </div>
-          </div>
-
-          <EmailReaderPanel
-            llmBackend={llmBackend}
-            llmModelPath={llmModelPath}
-            onChangeBackend={setLlmBackend}
-            onChangeModelPath={setLlmModelPath}
-          />
-        </div>
-
-        <div className="bg-slate-50 border-t border-slate-200 -mx-6 -mb-6 px-6 py-4 rounded-b-lg flex items-center justify-between gap-3">
-          <span className="text-xs text-slate-500">
-            Save profile goals, auto-sync schedule, and email reader settings.
-          </span>
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenOnboarding}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl whitespace-nowrap shadow-2xs transition-colors"
+            >
+              Quick Setup
+            </button>
             {savedNotice && (
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-900/60">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 {savedNotice}
               </span>
             )}
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md whitespace-nowrap shrink-0 disabled:opacity-60"
-            >
-              <Save className="w-3.5 h-3.5" />
-              {saving ? 'Saving...' : 'Save Settings'}
-            </button>
+            {activeTab !== 'backup' && activeTab !== 'automation' && activeTab !== 'email-sync' && (
+              <button
+                type="button"
+                onClick={() => handleSave()}
+                disabled={saving}
+                className="btn-cobalt inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-xl shadow-xs disabled:opacity-60 transition-all"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            )}
           </div>
         </div>
-      </form>
 
-      {/* Data Backup & Restore Card */}
-      <BackupRestoreSection onDataRestored={onDataRestored} />
+        {/* Tab Switcher */}
+        <div className="flex items-center gap-1.5 border-b border-[#e5e3dc] dark:border-slate-800 pb-2 overflow-x-auto">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all whitespace-nowrap ${
+                  active
+                    ? 'bg-[#234aff] text-white shadow-xs'
+                    : 'text-stone-600 dark:text-slate-400 hover:text-stone-900 dark:hover:text-slate-200 hover:bg-[#eeece6] dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {saveError && (
+        <div className="flex items-center gap-2 text-xs font-medium text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl px-4 py-2.5">
+          <span>{saveError}</span>
+        </div>
+      )}
+
+      {/* TAB 1: Job Preferences */}
+      {activeTab === 'preferences' && (
+        <form onSubmit={handleSave} className="space-y-6">
+          <div className="studio-card rounded-2xl border border-[#e5e3dc] dark:border-slate-800 p-6 space-y-5">
+            <div>
+              <h2 className="text-sm font-bold tracking-tight text-stone-900 dark:text-slate-100 font-display">
+                Job Preferences & Criteria
+              </h2>
+              <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
+                Target criteria used to score job alerts and match incoming applications.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-stone-700 dark:text-slate-300 mb-1">
+                  Target Job Titles (comma separated)
+                </label>
+                <input
+                  type="text"
+                  value={targetTitles}
+                  onChange={(e) => setTargetTitles(e.target.value)}
+                  placeholder="Backend Engineer, Python Developer, Tech Lead"
+                  className="w-full rounded-xl border border-[#e5e3dc] dark:border-slate-700 bg-white dark:bg-[#182030] text-stone-800 dark:text-slate-200 px-3.5 py-2 text-xs focus:border-[#234aff] focus:ring-1 focus:ring-[#234aff] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-stone-700 dark:text-slate-300 mb-1">
+                  Skills & Keywords
+                </label>
+                <input
+                  type="text"
+                  value={keywords}
+                  onChange={(e) => setKeywords(e.target.value)}
+                  placeholder="Python, SQL, FastAPI, React, Kubernetes"
+                  className="w-full rounded-xl border border-[#e5e3dc] dark:border-slate-700 bg-white dark:bg-[#182030] text-stone-800 dark:text-slate-200 px-3.5 py-2 text-xs focus:border-[#234aff] focus:ring-1 focus:ring-[#234aff] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-stone-700 dark:text-slate-300 mb-1">
+                  Words to Skip / Exclude
+                </label>
+                <input
+                  type="text"
+                  value={excluded}
+                  onChange={(e) => setExcluded(e.target.value)}
+                  placeholder="Intern, Unpaid, Director, Sales"
+                  className="w-full rounded-xl border border-[#e5e3dc] dark:border-slate-700 bg-white dark:bg-[#182030] text-stone-800 dark:text-slate-200 px-3.5 py-2 text-xs focus:border-[#234aff] focus:ring-1 focus:ring-[#234aff] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-stone-700 dark:text-slate-300 mb-1">
+                  Preferred Locations
+                </label>
+                <input
+                  type="text"
+                  value={locations}
+                  onChange={(e) => setLocations(e.target.value)}
+                  placeholder="Remote, Hybrid, New York, San Francisco"
+                  className="w-full rounded-xl border border-[#e5e3dc] dark:border-slate-700 bg-white dark:bg-[#182030] text-stone-800 dark:text-slate-200 px-3.5 py-2 text-xs focus:border-[#234aff] focus:ring-1 focus:ring-[#234aff] focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-[#e5e3dc] dark:border-slate-800 flex items-center justify-end">
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn-cobalt inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-xl shadow-xs disabled:opacity-60 transition-all"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {saving ? 'Saving...' : 'Save Preferences'}
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+
+      {/* TAB 2: Email Connection */}
+      {activeTab === 'email-sync' && (
+        <div className="space-y-6">
+          {/* Email Connection Summary Card */}
+          <div className="studio-card rounded-2xl border border-[#e5e3dc] dark:border-slate-800 p-6 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-[#eeece6] dark:bg-slate-800 text-stone-700 dark:text-slate-200 shrink-0">
+                <Mail className="w-5 h-5 text-[#234aff]" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-stone-900 dark:text-slate-100">Email Status</h2>
+                {imapStatus?.connected ? (
+                  <p className="text-xs text-stone-600 dark:text-slate-400 mt-0.5">
+                    Currently connected to <span className="font-semibold text-stone-900 dark:text-slate-100">{imapStatus.email}</span>
+                    {' · '}
+                    <span className="font-mono-tabular">{imapStatus.host}</span>
+                  </p>
+                ) : (
+                  <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
+                    No email connected. Configure your IMAP account below to scan for job updates.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                  imapStatus?.connected
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60'
+                    : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-400 border border-[#e5e3dc] dark:border-slate-700'
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    imapStatus?.connected ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-stone-400'
+                  }`}
+                />
+                {imapStatus?.connected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+          </div>
+
+          {/* Change / Configure Email Card */}
+          <div className="studio-card rounded-2xl border border-[#e5e3dc] dark:border-slate-800 p-6 space-y-4">
+            <div className="pb-3 border-b border-[#e5e3dc] dark:border-slate-800">
+              <h3 className="text-sm font-semibold text-stone-900 dark:text-slate-100">
+                {imapStatus?.connected ? 'Change Email Credentials' : 'Connect Email Account'}
+              </h3>
+              <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
+                Your credentials are encrypted locally on your machine and used strictly to scan job applications and interviews.
+              </p>
+            </div>
+
+            <ImapConnectionForm
+              initialStatus={imapStatus}
+              submitLabel={imapStatus?.connected ? 'Save & Reconnect' : 'Connect Email'}
+              onConnected={async () => {
+                toast.success('Email Connected', 'IMAP credentials verified and updated.');
+                if (onRefreshImap) await onRefreshImap();
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: Scan Filters & AI */}
+      {activeTab === 'filters-ai' && (
+        <div className="space-y-6">
+          {/* IMAP Scan Filters */}
+          <div className="studio-card rounded-2xl border border-[#e5e3dc] dark:border-slate-800 p-6 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-[#e5e3dc] dark:border-slate-800">
+              <div className="flex items-start gap-2.5">
+                <Filter className="w-4 h-4 text-stone-500 dark:text-slate-400 mt-0.5 shrink-0" />
+                <div>
+                  <h3 className="text-sm font-semibold text-stone-900 dark:text-slate-100">Email Scan Filters (IMAP)</h3>
+                  <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
+                    Pre-filters emails directly on your mail server before downloading.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 shrink-0">
+                {savingFilters && (
+                  <span className="text-xs text-stone-500 dark:text-slate-400">Saving...</span>
+                )}
+                {!savingFilters && filterNotice && (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {filterNotice}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={handleResetScanFilters}
+                  disabled={resettingFilters}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl whitespace-nowrap shrink-0 disabled:opacity-60 transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  {resettingFilters ? 'Resetting...' : 'Reset Defaults'}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <FilterKeywordEditor
+                label="Subject Keywords to Scan"
+                helper="Emails whose subject matches any of these words (plus Target Job Titles) are fetched."
+                placeholder="Add subject keyword (e.g. assessment, referral, interview)..."
+                items={scanSubjectKeywords}
+                onChange={(next) => handleScanFilterChange('scan_subject_keywords', next)}
+              />
+
+              <FilterKeywordEditor
+                label="Sender & Domain Keywords to Scan"
+                helper="Senders or job portals searched on the mail server."
+                placeholder="Add sender or domain (e.g. greenhouse.io, lever.co)..."
+                items={scanSenderKeywords}
+                onChange={(next) => handleScanFilterChange('scan_sender_keywords', next)}
+              />
+
+              <FilterKeywordEditor
+                label="Skip / Noise Words (Always Ignore)"
+                helper="Any email containing these sender or subject terms is bypassed immediately."
+                placeholder="Add term to skip (e.g. newsletter, receipt, order)..."
+                items={scanExcludeKeywords}
+                onChange={(next) => handleScanFilterChange('scan_exclude_keywords', next)}
+                tone="danger"
+              />
+            </div>
+          </div>
+
+          {/* AI Reader Engine Card */}
+          <form onSubmit={handleSave} className="studio-card rounded-2xl border border-[#e5e3dc] dark:border-slate-800 p-6 space-y-4">
+            <div className="flex items-start gap-2.5 pb-3 border-b border-[#e5e3dc] dark:border-slate-800">
+              <Cpu className="w-4 h-4 text-stone-500 dark:text-slate-400 mt-0.5 shrink-0" />
+              <div>
+                <h3 className="text-sm font-semibold text-stone-900 dark:text-slate-100">Email Parsing Engine</h3>
+                <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
+                  Choose the fast built-in rule parser or a private local AI model.
+                </p>
+              </div>
+            </div>
+
+            <EmailReaderPanel
+              llmBackend={llmBackend}
+              llmModelPath={llmModelPath}
+              onChangeBackend={setLlmBackend}
+              onChangeModelPath={setLlmModelPath}
+            />
+
+            <div className="pt-3 border-t border-[#e5e3dc] dark:border-slate-800 flex items-center justify-end">
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn-cobalt inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-xl shadow-xs disabled:opacity-60 transition-all"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {saving ? 'Saving...' : 'Save AI Settings'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* TAB 4: Background Jobs */}
+      {activeTab === 'automation' && (
+        <BackgroundJobsSection
+          workers={workers}
+          isLoading={loadingWorkers}
+          onRefresh={loadWorkers}
+          onUpdateWorker={handleUpdateWorker}
+          onRunWorker={handleRunWorker}
+        />
+      )}
+
+      {/* TAB 5: Backups & Data */}
+      {activeTab === 'backup' && (
+        <div className="space-y-6">
+          <BackupRestoreSection onDataRestored={onDataRestored} />
+        </div>
+      )}
     </div>
   );
 };

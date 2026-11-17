@@ -151,27 +151,27 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl rounded-lg border border-slate-200 bg-white my-8">
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+      <div className="w-full max-w-3xl rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white dark:bg-[#131926] shadow-xl overflow-hidden my-8">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-4">
           <div>
-            <h2 className="font-display text-base font-semibold text-slate-900">
+            <h2 className="font-display text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100">
               Quick Setup
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
               Set up once and your dashboard will be ready every time you open it.
             </p>
           </div>
           <button
             type="button"
             onClick={onSkip}
-            className="text-xs font-medium text-slate-500 hover:text-slate-900 whitespace-nowrap"
+            className="text-xs font-semibold text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 whitespace-nowrap transition-colors"
           >
             Skip for now
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 border-b border-slate-200 bg-slate-50 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50 dark:bg-[#0e1420]/80 text-xs">
           {[
             { id: 1, label: '1. Connect Email', icon: Mail },
             { id: 2, label: '2. Jobs You Want', icon: SlidersHorizontal },
@@ -189,10 +189,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   setSaveError('');
                   setStep(s.id as 1 | 2 | 3 | 4 | 5);
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-2 font-medium border-b-2 transition-colors whitespace-nowrap ${
+                className={`flex items-center justify-center gap-1.5 py-3 px-2 font-semibold border-b-2 transition-colors whitespace-nowrap ${
                   active
-                    ? 'border-blue-600 text-blue-700 bg-white'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                    ? 'border-blue-600 dark:border-blue-500 text-blue-700 dark:text-blue-400 bg-white dark:bg-[#131926]'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -326,7 +326,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <div className="space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="text-xs text-slate-600 max-w-lg">
-                  Before reading any email, Job Tracker searches headers on your mail server using these keywords. Review or customize them now, or change them later in Settings.
+                  Before reading any email, JobHQ searches headers on your mail server using these keywords. Review or customize them now, or change them later in Settings.
                 </p>
                 <button
                   type="button"

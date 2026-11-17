@@ -22,7 +22,7 @@ import { AddApplicationModal, AddInterviewModal } from './components/AddModals';
 import { ApplicationDrawer } from './components/ApplicationDrawer';
 import { ApplicationsTableView } from './components/ApplicationsTableView';
 import { AppHeader, AppSidebar, NAV_ITEMS } from './components/AppNavigation';
-import type { NavTab } from './components/AppNavigation';
+import type { NavTab, ThemeMode } from './components/AppNavigation';
 import { BatchDeleteKeywordModal } from './components/BatchDeleteKeywordModal';
 import type { BatchDeleteCandidateItem } from './components/BatchDeleteKeywordModal';
 import { CalendarView } from './components/CalendarView';
@@ -40,6 +40,7 @@ import { OverviewView } from './components/OverviewView';
 import { ProfileSettingsView } from './components/ProfileSettingsView';
 import { ScanLogView } from './components/ScanLogView';
 import { StatsView } from './components/StatsView';
+import { useToast } from './context/ToastContext';
 import type {
   Application,
   ApplicationStatus,
@@ -55,11 +56,75 @@ import type {
 } from './types';
 
 const STAGE_TONE: Record<ApplicationStatus, string> = {
-  applied: 'text-slate-700',
-  interviewing: 'text-blue-700',
-  offer: 'text-emerald-700',
-  rejected: 'text-rose-700',
-  ghosted: 'text-amber-700',
+  applied: 'text-[#4f46e5]',
+  interviewing: 'text-[#234aff]',
+  offer: 'text-[#107e3e]',
+  rejected: 'text-[#be123c]',
+  ghosted: 'text-[#78716c]',
+};
+
+const calculateSyncProgress = (syncJob: SyncJobStatus) => {
+  if (syncJob.phase === 'connecting') {
+    return {
+      pct: 8,
+      isIndeterminate: true,
+      stageLabel: 'Connecting',
+      stepText: 'Connecting to mail server...',
+    };
+  }
+  if (syncJob.phase === 'checking_headers') {
+    return {
+      pct: 18,
+      isIndeterminate: true,
+      stageLabel: 'Stage 1/2 · Scanning',
+      stepText:
+        syncJob.total_headers > 0
+          ? `Scanning ${syncJob.total_headers} email headers for job keywords...`
+          : 'Scanning email headers for job keywords...',
+    };
+  }
+  if (syncJob.phase === 'downloading') {
+    const ratio = syncJob.total > 0 ? syncJob.current / syncJob.total : 0;
+    const pct = Math.min(48, Math.max(18, Math.round(18 + ratio * 30)));
+    return {
+      pct,
+      isIndeterminate: false,
+      stageLabel: 'Stage 1/2 · Downloading',
+      stepText: `Downloading matching emails (${syncJob.current} of ${syncJob.total})`,
+    };
+  }
+  if (syncJob.phase === 'reading') {
+    const ratio = syncJob.total > 0 ? syncJob.current / syncJob.total : 0;
+    const pct = Math.min(96, Math.max(50, Math.round(50 + ratio * 46)));
+    return {
+      pct,
+      isIndeterminate: false,
+      stageLabel: 'Stage 2/2 · Ingesting',
+      stepText: `Parsing & categorizing applications (${syncJob.current} of ${syncJob.total})`,
+    };
+  }
+  if (syncJob.phase === 'unloading') {
+    return {
+      pct: 98,
+      isIndeterminate: false,
+      stageLabel: 'Finalizing',
+      stepText: 'Saving updates & finalizing sync...',
+    };
+  }
+  if (syncJob.phase === 'cancelling') {
+    return {
+      pct: 100,
+      isIndeterminate: false,
+      stageLabel: 'Stopping',
+      stepText: 'Stopping sync safely...',
+    };
+  }
+  return {
+    pct: 0,
+    isIndeterminate: false,
+    stageLabel: 'Syncing',
+    stepText: 'Syncing inbox...',
+  };
 };
 
 export default function App() {
@@ -78,6 +143,36 @@ export default function App() {
     }
     return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true;
   });
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    try {
+      const saved = window.localStorage.getItem('job_tracker_theme');
+      if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
+    } catch {
+      // Ignore storage failures
+    }
+    return 'system';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const applyTheme = () => {
+      const isDark =
+        theme === 'dark' ||
+        (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      root.classList.toggle('dark', isDark);
+    };
+    applyTheme();
+    try {
+      window.localStorage.setItem('job_tracker_theme', theme);
+    } catch {}
+
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const listener = () => {
+      if (theme === 'system') applyTheme();
+    };
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [theme]);
   const [overviewPaceMode, setOverviewPaceMode] = useState<'daily' | 'weekly'>('weekly');
 
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
@@ -90,8 +185,10 @@ export default function App() {
   const [syncJob, setSyncJob] = useState<SyncJobStatus | null>(null);
   const [scanRefreshKey, setScanRefreshKey] = useState(0);
   const [statsRefreshKey, setStatsRefreshKey] = useState(0);
-  const [syncDays, setSyncDays] = useState(30);
+  const [syncDays, setSyncDays] = useState(1);
   const [banner, setBanner] = useState<{ type: 'info' | 'error'; text: string } | null>(null);
+
+  const { toast } = useToast();
 
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [showAddApp, setShowAddApp] = useState(false);
@@ -159,6 +256,7 @@ export default function App() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load workspace data.';
       setBanner({ type: 'error', text: message });
+      toast.error('Workspace load failed', message);
     } finally {
       setLoading(false);
     }
@@ -236,26 +334,36 @@ export default function App() {
           if (s.model_unloaded) parts.push('AI model unloaded from RAM');
           if (s.llm_fallback_note) parts.push(s.llm_fallback_note);
           setBanner({ type: 'info', text: parts.join(' · ') });
+          toast.success(
+            'Inbox sync completed',
+            `${s.applications_added + s.applications_updated} jobs updated · ${s.interviews_added} interviews · ${s.alerts_added} alerts`,
+          );
         } else if (next.status === 'cancelled') {
           const extra =
             s.processed_new > 0 ? ` Saved ${s.processed_new} scanned email(s) before stopping.` : '';
+          const msg = `${next.error || 'Sync cancelled.'}${extra}${s.model_unloaded ? ' · AI model unloaded from RAM' : ''}`;
           setBanner({
             type: 'info',
-            text: `${next.error || 'Sync cancelled.'}${extra}${s.model_unloaded ? ' · AI model unloaded from RAM' : ''}`,
+            text: msg,
           });
+          toast.info('Sync cancelled', msg);
         } else if (next.status === 'error') {
+          const errMsg = next.error || 'Email sync failed. Check terminal logs for details.';
           setBanner({
             type: 'error',
-            text: next.error || 'Email sync failed. Check terminal logs for details.',
+            text: errMsg,
           });
+          toast.error('Sync failed', errMsg);
         }
       } catch (err) {
         clearInterval(timer);
         setSyncJob(null);
+        const errMsg = err instanceof Error ? err.message : 'Lost connection while checking sync status.';
         setBanner({
           type: 'error',
-          text: err instanceof Error ? err.message : 'Lost connection while checking sync status.',
+          text: errMsg,
         });
+        toast.error('Sync connection lost', errMsg);
       }
     }, 650);
     return () => clearInterval(timer);
@@ -287,9 +395,11 @@ export default function App() {
     try {
       const started = await api.syncImap(syncDays, forceRescan);
       setSyncJob(started);
+      toast.info('Sync started', `Scanning emails from the past ${syncDays} day${syncDays === 1 ? '' : 's'}...`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not start inbox sync.';
       setBanner({ type: 'error', text: message });
+      toast.error('Sync failed to start', message);
     }
   };
 
@@ -329,19 +439,23 @@ export default function App() {
   const handleBulkMoveApps = async (ids: number[], status: ApplicationStatus) => {
     const res = await api.bulkApplications({ ids, action: 'move_stage', status });
     await loadAllData();
+    const msg = `Moved ${res.updated} application${res.updated === 1 ? '' : 's'} to ${status}.`;
     setBanner({
       type: 'info',
-      text: `Moved ${res.updated} application${res.updated === 1 ? '' : 's'} to ${status}.`,
+      text: msg,
     });
+    toast.success('Applications updated', msg);
   };
 
   const handleBulkDeleteApps = async (ids: number[]) => {
     const res = await api.bulkApplications({ ids, action: 'delete' });
     await loadAllData();
+    const msg = `Deleted ${res.deleted} application${res.deleted === 1 ? '' : 's'}.`;
     setBanner({
       type: 'info',
-      text: `Deleted ${res.deleted} application${res.deleted === 1 ? '' : 's'}.`,
+      text: msg,
     });
+    toast.info('Applications deleted', msg);
   };
 
   const handleCreateApp = async (payload: Partial<Application>): Promise<boolean> => {
@@ -425,10 +539,20 @@ export default function App() {
     const res = await api.updateAlertStatus(id, status);
     await loadAllData();
     if (status === 'applied' && res.created_application) {
+      const msg = `Added "${res.created_application.role_title}" (${res.created_application.source_platform}) to Applied.`;
       setBanner({
         type: 'info',
-        text: `Added "${res.created_application.role_title}" (${res.created_application.source_platform}) to Applied.`,
+        text: msg,
       });
+      toast.success('Applied to Job', msg);
+    } else if (status === 'dismissed') {
+      const targetAlert = alerts.find((a) => a.id === id) || dashboard?.suggested_alerts.find((a) => a.id === id);
+      const title = targetAlert?.job_title ? `"${targetAlert.job_title}"` : 'Job alert';
+      toast.info('Alert dismissed', `${title} moved to Dismissed.`);
+    } else if (status === 'suggested') {
+      const targetAlert = alerts.find((a) => a.id === id);
+      const title = targetAlert?.job_title ? `"${targetAlert.job_title}"` : 'Job alert';
+      toast.info('Alert restored', `${title} restored to Suggested.`);
     }
   };
 
@@ -436,6 +560,7 @@ export default function App() {
     await api.deleteAlert(id);
     await loadAllData();
     setBanner({ type: 'info', text: 'Deleted job alert.' });
+    toast.info('Alert deleted', 'Job alert was removed.');
   };
 
   const handleBulkAlertAction = async (
@@ -445,26 +570,34 @@ export default function App() {
     const res = await api.bulkAlerts({ ids, action });
     await loadAllData();
     if (action === 'apply') {
+      const msg = `Marked ${res.updated} alert${res.updated === 1 ? '' : 's'} applied (${res.created_applications} added to Applied).`;
       setBanner({
         type: 'info',
-        text: `Marked ${res.updated} alert${res.updated === 1 ? '' : 's'} applied (${res.created_applications} added to Applied).`,
+        text: msg,
       });
+      toast.success('Alerts applied', msg);
     } else if (action === 'dismiss') {
+      const msg = `Dismissed ${res.updated} alert${res.updated === 1 ? '' : 's'}.`;
       setBanner({
         type: 'info',
-        text: `Dismissed ${res.updated} alert${res.updated === 1 ? '' : 's'}.`,
+        text: msg,
       });
+      toast.info('Alerts dismissed', msg);
     } else if (action === 'delete') {
       const count = res.deleted ?? 0;
+      const msg = `Deleted ${count} job alert${count === 1 ? '' : 's'}.`;
       setBanner({
         type: 'info',
-        text: `Deleted ${count} job alert${count === 1 ? '' : 's'}.`,
+        text: msg,
       });
+      toast.info('Alerts deleted', msg);
     } else {
+      const msg = `Restored ${res.updated} alert${res.updated === 1 ? '' : 's'} to Suggested.`;
       setBanner({
         type: 'info',
-        text: `Restored ${res.updated} alert${res.updated === 1 ? '' : 's'} to Suggested.`,
+        text: msg,
       });
+      toast.info('Alerts restored', msg);
     }
   };
 
@@ -498,15 +631,19 @@ export default function App() {
     const res = await api.convertAlert(alertId, payload);
     await loadAllData();
     if (res.target === 'interview') {
+      const msg = `Moved "${res.application.role_title}" at ${res.application.company} to Upcoming Interviews.`;
       setBanner({
         type: 'info',
-        text: `Moved "${res.application.role_title}" at ${res.application.company} to Upcoming Interviews.`,
+        text: msg,
       });
+      toast.success('Alert converted', msg);
     } else {
+      const msg = `Moved "${res.application.role_title}" at ${res.application.company} to Applications.`;
       setBanner({
         type: 'info',
-        text: `Moved "${res.application.role_title}" at ${res.application.company} to Applications.`,
+        text: msg,
       });
+      toast.success('Alert converted', msg);
     }
     return true;
   };
@@ -523,10 +660,12 @@ export default function App() {
       setDuplicateGuard(null);
       setShowAddApp(false);
       await loadAllData();
+      const msg = `Updated existing application "${updated.role_title}" at ${updated.company}.`;
       setBanner({
         type: 'info',
-        text: `Updated existing application "${updated.role_title}" at ${updated.company}.`,
+        text: msg,
       });
+      toast.success('Application updated', msg);
     } else if (guard.kind === 'alert_apply') {
       const res = await api.updateAlertStatus(guard.alert.id, 'applied', {
         resolve_duplicate: 'update_existing',
@@ -535,12 +674,14 @@ export default function App() {
       setDuplicateGuard(null);
       await loadAllData();
       const targetApp = res.updated_application || res.created_application;
+      const msg = targetApp
+        ? `Updated existing application "${targetApp.role_title}" at ${targetApp.company} and marked alert applied.`
+        : 'Updated existing application and marked alert applied.';
       setBanner({
         type: 'info',
-        text: targetApp
-          ? `Updated existing application "${targetApp.role_title}" at ${targetApp.company} and marked alert applied.`
-          : 'Updated existing application and marked alert applied.',
+        text: msg,
       });
+      toast.success('Application updated', msg);
     } else if (guard.kind === 'alert_convert') {
       const res = await api.convertAlert(guard.alertId, {
         ...guard.payload,
@@ -550,10 +691,12 @@ export default function App() {
       setDuplicateGuard(null);
       setMoveAlertState(null);
       await loadAllData();
+      const msg = `Updated existing application "${res.application.role_title}" at ${res.application.company}.`;
       setBanner({
         type: 'info',
-        text: `Updated existing application "${res.application.role_title}" at ${res.application.company}.`,
+        text: msg,
       });
+      toast.success('Application updated', msg);
     }
   };
 
@@ -565,10 +708,12 @@ export default function App() {
       setDuplicateGuard(null);
       setShowAddApp(false);
       await loadAllData();
+      const msg = `Added "${created.role_title}" at ${created.company} as a separate application.`;
       setBanner({
         type: 'info',
-        text: `Added "${created.role_title}" at ${created.company} as a separate application.`,
+        text: msg,
       });
+      toast.success('Application added', msg);
     } else if (guard.kind === 'alert_apply') {
       const res = await api.updateAlertStatus(guard.alert.id, 'applied', {
         resolve_duplicate: 'add_anyway',
@@ -576,10 +721,12 @@ export default function App() {
       setDuplicateGuard(null);
       await loadAllData();
       if (res.created_application) {
+        const msg = `Added "${res.created_application.role_title}" (${res.created_application.source_platform}) as a separate application.`;
         setBanner({
           type: 'info',
-          text: `Added "${res.created_application.role_title}" (${res.created_application.source_platform}) as a separate application.`,
+          text: msg,
         });
+        toast.success('Application added', msg);
       }
     } else if (guard.kind === 'alert_convert') {
       const res = await api.convertAlert(guard.alertId, {
@@ -589,10 +736,12 @@ export default function App() {
       setDuplicateGuard(null);
       setMoveAlertState(null);
       await loadAllData();
+      const msg = `Moved "${res.application.role_title}" at ${res.application.company} as a separate application.`;
       setBanner({
         type: 'info',
-        text: `Moved "${res.application.role_title}" at ${res.application.company} as a separate application.`,
+        text: msg,
       });
+      toast.success('Application added', msg);
     }
   };
 
@@ -602,10 +751,12 @@ export default function App() {
       min_score: minScore,
     });
     await loadAllData();
+    const msg = `Dismissed ${res.updated} alert${res.updated === 1 ? '' : 's'} below ${minScore}% match.`;
     setBanner({
       type: 'info',
-      text: `Dismissed ${res.updated} alert${res.updated === 1 ? '' : 's'} below ${minScore}% match.`,
+      text: msg,
     });
+    toast.info('Low-match alerts dismissed', msg);
   };
 
   const handleRescoreAlerts = async () => {
@@ -623,6 +774,7 @@ export default function App() {
     await api.disconnectImap();
     await loadAllData();
     setBanner({ type: 'info', text: 'Disconnected saved IMAP mailbox.' });
+    toast.info('Mailbox disconnected', 'Your saved IMAP mailbox was disconnected.');
   };
 
   const applications = dashboard?.applications || [];
@@ -693,7 +845,7 @@ export default function App() {
   const imap = dashboard?.imap;
 
   return (
-    <div className="min-h-screen flex bg-slate-50 text-slate-900">
+    <div className="min-h-screen flex bg-[var(--canvas)] text-slate-900 dark:text-slate-100 transition-colors duration-150">
       <AppSidebar
         sidebarOpen={sidebarOpen}
         onToggleSidebar={toggleSidebar}
@@ -703,6 +855,8 @@ export default function App() {
         upcomingInterviewsCount={dashboard?.kpis.upcoming_interviews || 0}
         imap={imap}
         onOpenImapModal={() => setShowImapModal(true)}
+        theme={theme}
+        onSelectTheme={setTheme}
       />
 
       {/* Main Content */}
@@ -725,75 +879,75 @@ export default function App() {
         />
 
         <main className="flex-1 p-6 space-y-6 max-w-[1440px] w-full mx-auto">
-          {syncing && syncJob && (
-            <div className="rounded-lg border border-blue-200 bg-white p-4 space-y-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <RefreshCw className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
-                  <span className="text-xs font-semibold text-slate-900">
-                    {syncJob.phase === 'connecting' && 'Connecting to your email server...'}
-                    {syncJob.phase === 'checking_headers' &&
-                      'Checking email headers for job keywords...'}
-                    {syncJob.phase === 'downloading' &&
-                      `Downloading matching job emails (${syncJob.current}/${syncJob.total})...`}
-                    {syncJob.phase === 'reading' &&
-                      `Reading matching emails (${syncJob.current}/${syncJob.total})...`}
-                    {syncJob.phase === 'unloading' &&
-                      'Unloading Local AI model from memory...'}
-                    {syncJob.phase === 'cancelling' && 'Stopping sync safely...'}
+          {syncing && syncJob && (() => {
+            const progress = calculateSyncProgress(syncJob);
+            return (
+              <div className="studio-card rounded-2xl p-4.5 space-y-3 shadow-xs border-l-4 border-l-[#234aff]">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-[#234aff]/10 flex items-center justify-center text-[#234aff] shrink-0">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-stone-900 dark:text-slate-100">
+                          {progress.stepText}
+                        </span>
+                        {!progress.isIndeterminate && (
+                          <span className="text-[11px] font-mono-tabular font-bold text-[#234aff] bg-[#234aff]/10 px-2 py-0.5 rounded-md">
+                            {progress.pct}%
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-stone-500 dark:text-slate-400 truncate max-w-xl">
+                        {syncJob.current_subject
+                          ? `Subject: ${syncJob.current_subject}`
+                          : syncJob.phase === 'checking_headers'
+                          ? 'Checking subject lines & senders against your keywords...'
+                          : 'Processing emails...'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    {syncJob.total > 0 && (
+                      <span className="font-mono-tabular text-xs font-semibold text-stone-600 dark:text-slate-300">
+                        {syncJob.current} / {syncJob.total} items
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleCancelSync}
+                      disabled={syncJob.phase === 'cancelling'}
+                      className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-[#f6f5f2] rounded-lg whitespace-nowrap shrink-0 disabled:opacity-50 cursor-pointer shadow-2xs transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      {syncJob.phase === 'cancelling' ? 'Stopping...' : 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="h-2 w-full rounded-full bg-[#eeece6] dark:bg-slate-800 overflow-hidden relative">
+                  <div
+                    className={`h-full bg-[#234aff] rounded-full transition-all duration-300 ${
+                      progress.isIndeterminate ? 'animate-pulse' : ''
+                    }`}
+                    style={{ width: `${progress.pct}%` }}
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-stone-500 dark:text-slate-400 font-mono-tabular">
+                  <span>
+                    {syncJob.total_headers} headers scanned · {syncJob.filtered_out} non-job filtered
+                  </span>
+                  <span>
+                    {syncJob.stats.applications_added + syncJob.stats.applications_updated} jobs updated ·{' '}
+                    {syncJob.stats.interviews_added} interviews · {syncJob.stats.alerts_added} alerts
                   </span>
                 </div>
-
-                <div className="flex items-center gap-3 shrink-0">
-                  {syncJob.total > 0 && (
-                    <span className="font-mono-tabular text-xs font-medium text-slate-700">
-                      {syncJob.current} / {syncJob.total}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleCancelSync}
-                    disabled={syncJob.phase === 'cancelling'}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-700 border border-slate-300 hover:bg-slate-50 rounded whitespace-nowrap shrink-0 disabled:opacity-50"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    {syncJob.phase === 'cancelling' ? 'Stopping...' : 'Cancel'}
-                  </button>
-                </div>
               </div>
-
-              <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className={`h-full bg-blue-600 transition-all duration-300 ${
-                    syncJob.total === 0 ? 'w-1/3 animate-pulse' : ''
-                  }`}
-                  style={
-                    syncJob.total > 0
-                      ? {
-                          width: `${Math.max(
-                            6,
-                            Math.min(100, Math.round((syncJob.current / syncJob.total) * 100)),
-                          )}%`,
-                        }
-                      : undefined
-                  }
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
-                <span className="truncate max-w-xl">
-                  {syncJob.current_subject
-                    ? `Current: ${syncJob.current_subject}`
-                    : 'Filtering recent emails by job keywords...'}
-                </span>
-                <span className="font-mono-tabular whitespace-nowrap">
-                  {syncJob.total_headers} headers · {syncJob.filtered_out} non-job filtered ·{' '}
-                  {syncJob.stats.applications_added + syncJob.stats.applications_updated} updates ·{' '}
-                  {syncJob.stats.interviews_added} interviews · {syncJob.stats.alerts_added} alerts
-                </span>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {banner && (
             <div
@@ -832,6 +986,9 @@ export default function App() {
               overviewStats={overviewStats}
               applications={applications}
               imapConnected={Boolean(imap?.connected)}
+              syncing={syncing}
+              syncDays={syncDays}
+              onChangeSyncDays={setSyncDays}
               overviewPaceMode={overviewPaceMode}
               onChangePaceMode={setOverviewPaceMode}
               onOpenBoard={() => {
@@ -877,27 +1034,27 @@ export default function App() {
           ) : activeTab === 'applications' ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
                   <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <Search className="w-3.5 h-3.5 text-[#8e8a7f] absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={appSearch}
                       onChange={(e) => setAppSearch(e.target.value)}
                       placeholder="Search company, role, source..."
-                      className="pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md w-60 focus:border-blue-600 focus:outline-none"
+                      className="pl-8 pr-3 py-1 text-xs bg-white dark:bg-[#131926] border border-[#e5e3dc] dark:border-slate-700 rounded-lg text-[#12141d] dark:text-slate-200 w-44 sm:w-52 focus:border-[#234aff] focus:outline-none shadow-2xs font-medium"
                     />
                   </div>
 
                   {appViewMode === 'table' && (
-                    <div className="inline-flex items-center gap-1 p-1 bg-slate-100 rounded-md border border-slate-200">
+                    <div className="inline-flex items-center gap-0.5 p-0.5 bg-[#eeece6] dark:bg-slate-900/80 rounded-lg border border-[#e5e3dc] dark:border-slate-800">
                       <button
                         type="button"
                         onClick={() => setAppStatusFilter('all')}
-                        className={`px-2.5 py-1 text-xs font-medium rounded whitespace-nowrap ${
+                        className={`px-2 py-0.5 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
                           appStatusFilter === 'all'
-                            ? 'bg-white text-slate-900 border border-slate-200'
-                            : 'text-slate-600 hover:text-slate-900'
+                            ? 'bg-white dark:bg-[#1c2436] text-[#12141d] dark:text-white shadow-2xs font-bold'
+                            : 'text-[#58554d] dark:text-slate-400 hover:text-[#12141d] dark:hover:text-slate-200'
                         }`}
                       >
                         All
@@ -907,10 +1064,10 @@ export default function App() {
                           key={st.key}
                           type="button"
                           onClick={() => setAppStatusFilter(st.key)}
-                          className={`px-2.5 py-1 text-xs font-medium rounded whitespace-nowrap ${
+                          className={`px-2 py-0.5 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
                             appStatusFilter === st.key
-                              ? 'bg-white text-slate-900 border border-slate-200'
-                              : 'text-slate-600 hover:text-slate-900'
+                              ? 'bg-white dark:bg-[#1c2436] text-[#12141d] dark:text-white shadow-2xs font-bold'
+                              : 'text-[#58554d] dark:text-slate-400 hover:text-[#12141d] dark:hover:text-slate-200'
                           }`}
                         >
                           {st.label}
@@ -923,17 +1080,17 @@ export default function App() {
                     type="button"
                     onClick={() => setAppStaleOnly((v) => !v)}
                     title="Show applications unchanged for 10+ days (auto-moved to Ghosted)"
-                    className={`px-2.5 py-1.5 text-xs font-medium rounded-md border whitespace-nowrap ${
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg border whitespace-nowrap transition-colors shadow-2xs ${
                       appStaleOnly
-                        ? 'bg-amber-50 border-amber-300 text-amber-800'
-                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                        ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300'
+                        : 'bg-white dark:bg-[#131926] border-[#e5e3dc] dark:border-slate-700 text-[#58554d] dark:text-slate-300 hover:bg-[#f6f5f2] dark:hover:bg-slate-800'
                     }`}
                   >
                     Follow-up 10d+ ({staleAppCount})
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {applications.length > 0 && (
                     <button
                       type="button"
@@ -948,7 +1105,7 @@ export default function App() {
                           ),
                         })
                       }
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 rounded-md whitespace-nowrap"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-[#be123c] dark:text-rose-300 bg-white dark:bg-[#131926] border border-[#be123c]/30 hover:bg-[#be123c]/10 rounded-lg whitespace-nowrap shadow-2xs transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Batch Delete
@@ -959,20 +1116,20 @@ export default function App() {
                     type="button"
                     onClick={handleExportAppsCsv}
                     disabled={filteredApps.length === 0}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-md whitespace-nowrap disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-[#12141d] dark:text-slate-300 bg-white dark:bg-[#131926] border border-[#e5e3dc] dark:border-slate-700 hover:bg-[#f6f5f2] dark:hover:bg-slate-800 rounded-lg whitespace-nowrap disabled:opacity-50 shadow-2xs transition-colors"
                   >
                     <Download className="w-3.5 h-3.5" />
                     Export CSV
                   </button>
 
-                  <div className="inline-flex items-center gap-1 p-1 bg-slate-100 rounded-md border border-slate-200">
+                  <div className="inline-flex items-center gap-0.5 p-0.5 bg-[#eeece6] dark:bg-slate-900/80 rounded-lg border border-[#e5e3dc] dark:border-slate-800 shrink-0">
                     <button
                       type="button"
                       onClick={() => setAppViewMode('kanban')}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded whitespace-nowrap ${
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
                         appViewMode === 'kanban'
-                          ? 'bg-white text-slate-900 border border-slate-200'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? 'bg-white dark:bg-[#1c2436] text-[#12141d] dark:text-white shadow-2xs font-bold'
+                          : 'text-[#58554d] dark:text-slate-400 hover:text-[#12141d] dark:hover:text-slate-200'
                       }`}
                     >
                       <Columns3 className="w-3.5 h-3.5" />
@@ -981,10 +1138,10 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setAppViewMode('table')}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded whitespace-nowrap ${
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
                         appViewMode === 'table'
-                          ? 'bg-white text-slate-900 border border-slate-200'
-                          : 'text-slate-600 hover:text-slate-900'
+                          ? 'bg-white dark:bg-[#1c2436] text-[#12141d] dark:text-white shadow-2xs font-bold'
+                          : 'text-[#58554d] dark:text-slate-400 hover:text-[#12141d] dark:hover:text-slate-200'
                       }`}
                     >
                       <Table2 className="w-3.5 h-3.5" />
@@ -995,12 +1152,12 @@ export default function App() {
               </div>
 
               {filteredApps.length === 0 ? (
-                <div className="rounded-lg border border-slate-200 bg-white p-10 text-center">
-                  <ListFilter className="w-6 h-6 text-slate-400 mx-auto mb-2.5" />
-                  <h3 className="text-sm font-semibold text-slate-900">
+                <div className="rounded-2xl border border-[#e5e3dc] dark:border-slate-800 bg-white dark:bg-[#131926] p-12 text-center shadow-2xs">
+                  <ListFilter className="w-7 h-7 text-[#8e8a7f] mx-auto mb-3" />
+                  <h3 className="text-sm font-bold tracking-tight text-[#12141d] dark:text-slate-100 font-display">
                     No matching applications
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-[#58554d] dark:text-slate-400 mt-1">
                     Adjust your search/filter or add a new application.
                   </p>
                 </div>
@@ -1080,11 +1237,15 @@ export default function App() {
           ) : (
             <ProfileSettingsView
               profile={profile}
-              imapStatus={imap || null}
+              imapStatus={dashboard?.imap || null}
               onSaveProfile={handleSaveProfile}
               onOpenImapModal={() => setShowImapModal(true)}
               onOpenOnboarding={() => setShowOnboarding(true)}
               onDataRestored={loadAllData}
+              onRefreshImap={async () => {
+                const dashRes = await api.getDashboard();
+                setDashboard(dashRes);
+              }}
             />
           )}
         </main>
@@ -1249,10 +1410,12 @@ export default function App() {
             summaryParts.push('deleted item');
           }
           if (summaryParts.length > 0) {
+            const msg = `Email scan filters updated: ${summaryParts.join(' · ')}.`;
             setBanner({
               type: 'info',
-              text: `Email scan filters updated: ${summaryParts.join(' · ')}.`,
+              text: msg,
             });
+            toast.info('Scan filters updated', msg);
           }
         }}
       />

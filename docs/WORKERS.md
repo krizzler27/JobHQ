@@ -53,11 +53,14 @@ Job Tracker uses a **multi-process supervisor architecture** orchestrated by [se
 
 Scheduling infrastructure is strictly separated from concrete domain jobs:
 
-- [backend/workers/core/base.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/core/base.py) — Abstract `BaseWorker` contract.
-- [backend/workers/core/runner.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/core/runner.py) — Generic `WorkerRunner` scheduler and thread dispatcher.
-- [backend/workers/email_job_sync.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/email_job_sync.py) — Concrete worker synchronizing job pipeline updates from IMAP email.
-- [backend/workers/interview_lifecycle.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/interview_lifecycle.py) — Concrete worker auto-completing past scheduled interviews.
-- [backend/workers/auto_ghost.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_ghost.py) — Concrete worker auto-ghosting stale applied applications.
+- [backend/workers/core/base.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/core/base.py) — Abstract `BaseWorker` contract with `default_interval_minutes`.
+- [backend/workers/core/runner.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/core/runner.py) — Desktop-first `WorkerRunner` scheduler and thread dispatcher.
+- [backend/repositories/worker_state.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/repositories/worker_state.py) — Persisted execution states & interval checks (`worker_states` table).
+- [backend/workers/email_job_sync.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/email_job_sync.py) — Concrete worker synchronizing job pipeline updates from IMAP email (every 4h).
+- [backend/workers/interview_lifecycle.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/interview_lifecycle.py) — Concrete worker auto-completing past scheduled interviews (every 1h).
+- [backend/workers/auto_ghost.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_ghost.py) — Concrete worker auto-ghosting stale applied applications (every 24h).
+- [backend/workers/auto_backup.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_backup.py) — Concrete worker taking hot SQLite snapshots to `data/backups/jobhq_latest.db` (every 7d).
+- [backend/workers/alert_cleanup.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/alert_cleanup.py) — Concrete worker pruning noisy unapplied alerts older than 5 days (every 5d).
 - [backend/workers/__main__.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/__main__.py) — Daemon process entrypoint (`python -m backend.workers`).
 - `backend/workers/__init__.py` and `backend/workers/core/__init__.py` — Empty package markers (0 bytes). Modules use explicit imports to avoid re-export bloat and circular dependencies.
 
@@ -76,17 +79,19 @@ All background tasks subclass `BaseWorker`, which defines four abstract members:
 
 ### 3.2 `WorkerRunner` ([core/runner.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/core/runner.py))
 The daemon orchestrator:
+- **Desktop-First Interval Evaluation**: Instead of relying on a wall-clock cron (e.g. 3:00 AM) that fails if a laptop or local desktop is closed or asleep, workers evaluate elapsed time using `WorkerStateRepository.is_due(worker.name, interval_minutes)`. If the configured interval has elapsed since `last_run_at`, the worker triggers immediately upon startup and updates its execution timestamp in `worker_states`.
+- **Dynamic User Controls**: Worker frequency intervals and threshold metrics (e.g. alert pruning retention days, ghosting inactivity days) are user-configurable via the REST API (`/api/workers`) and Settings UI.
 - **Tick Loop**: Evaluates registered workers every 15 seconds (`poll_interval=15.0`) using a `threading.Event` wait for immediate, clean termination on `stop()`.
-- **Minute Deduplication**: Tracks `_last_dispatched_minute` (`YYYY-MM-DD HH:MM`) so cron jobs fire exactly once per matching minute regardless of tick frequency.
+- **Deduplication**: Tracks in-flight workers in a set so a running worker is never invoked concurrently.
 - **Thread Isolation**: Each due job runs in an independent daemon thread (`WorkerThread-<name>`). Slow tasks never block the scheduler tick or delay sibling workers.
 - **Exception Containment**: Exceptions in `is_enabled`, `get_cron`, or `execute` are caught and logged per-worker. A failure in one worker cannot crash the daemon or affect other tasks.
 - **Logging Standards**:
   - `[Worker:runner] Registered worker: <name>`
-  - `[Worker:<name>] Triggered (cron='<expr>')`
-  - `[Worker:<name>] Completed in X.XXs (next run: YYYY-MM-DD HH:MM)`
+  - `[Worker:<name>] Triggered (interval=Xm)`
+  - `[Worker:<name>] Completed in X.XXs`
   - `[Worker:<name>] Failed after X.XXs: <error>`
   - `[Worker:<name>] Skipped: <reason>`
-- **Runtime Metrics**: `runner.get_worker_metrics(name)` exposes `last_run`, `last_duration_seconds`, `last_status` (`"success" | "failed" | "never_run"`), `last_error`, and `next_run`.
+- **Runtime Metrics & Persistence**: States are stored in the SQLite `worker_states` table (`name`, `last_run_at`, `last_status`, `last_duration_seconds`, `last_error`, `interval_minutes`, `threshold_days`, `is_enabled`).
 
 ---
 
@@ -94,19 +99,39 @@ The daemon orchestrator:
 
 ### `EmailJobSyncWorker` ([email_job_sync.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/email_job_sync.py))
 - Injects `DatabaseManager` and `SyncJobManager`.
-- Checks `profile_settings.auto_sync_enabled` and `profile_settings.auto_sync_cron` (default: `0 */4 * * *`).
+- Runs on a default 4-hour interval (`default_interval_minutes = 240`).
 - Executes `sync_jobs.start_sync(days=profile.auto_sync_days)`.
 - If an IMAP sync is already running (e.g. triggered manually from the UI), it safely skips execution without conflicting.
 
-### `InterviewLifecycleWorker` ([interview_lifecycle.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/interview_lifecycle.py))
+### `AutoBackupWorker` ([auto_backup.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_backup.py))
 - Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.
-- Runs hourly (`0 * * * *`).
-- Automatically transitions `upcoming` interviews whose scheduled end time (`scheduled_at + duration_minutes`) has elapsed to `completed`.
+- Runs weekly by default (`default_interval_minutes = 10080` / 7 days).
+- Creates an atomic hot SQLite snapshot into `~/.jobhq/backups/jobhq_latest.db`, rotating existing copies to `.bak`. Avoids wasteful file duplication while protecting against disk or database corruption.
+
+### `AlertCleanupWorker` ([alert_cleanup.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/alert_cleanup.py))
+- Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.
+- Runs on a configurable interval (default: 5 days) with a configurable retention threshold (`threshold_days`, default: 5 days).
+- Hard-deletes noisy unreviewed and dismissed job alerts older than the threshold, preserving applied applications.
+
+### `DbMaintenanceWorker` ([db_maintenance.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/db_maintenance.py))
+- Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.
+- Runs on a configurable interval (default: 7 days).
+- Executes `PRAGMA wal_checkpoint(TRUNCATE)` to flush WAL logs back into the database file and runs `PRAGMA optimize` to update SQLite query planner statistics.
+
+### `EmailAuditPruneWorker` ([email_audit_prune.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/email_audit_prune.py))
+- Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.
+- Runs on a configurable interval (default: 7 days) with a configurable retention threshold (`threshold_days`, default: 7 days).
+- Prunes raw subjects and sender strings from processed email audit logs older than the threshold while keeping message hashes so deduplication is 100% maintained.
 
 ### `AutoGhostWorker` ([auto_ghost.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_ghost.py))
 - Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.
-- Runs daily at midnight (`0 0 * * *`).
-- Automatically transitions `applied` applications with no updates for 10+ days to `ghosted` via `JobHQLifecycleService.ghost_stale_applications()`.
+- Runs daily (`default_interval_minutes = 1440` / 24 hours) with a configurable inactivity threshold (`threshold_days`, default: 10 days).
+- Automatically transitions `applied` applications with no employer updates beyond the threshold to `ghosted`.
+
+### `InterviewLifecycleWorker` ([interview_lifecycle.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/interview_lifecycle.py))
+- Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.
+- Runs hourly (`default_interval_minutes = 60` / 1 hour).
+- Automatically transitions `upcoming` interviews whose scheduled end time (`scheduled_at + duration_minutes`) has elapsed to `completed`.
 
 ---
 

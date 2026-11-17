@@ -1,4 +1,4 @@
-"""24/7 background worker runner engine and scheduler loop."""
+"""24/7 background worker runner engine with database-persisted interval scheduling."""
 
 import logging
 import signal
@@ -6,11 +6,13 @@ import sys
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from types import FrameType
-from typing import Any
+from typing import Any, Optional
 
 from backend.core.cron import matches_cron, next_cron_run
+from backend.core.database import DatabaseManager
+from backend.repositories.worker_state import WorkerStateRepository
 from backend.workers.core.base import BaseWorker
 
 logger = logging.getLogger("job_tracker.workers.runner")
@@ -27,17 +29,19 @@ class WorkerRuntimeMeta:
 
 
 class WorkerRunner:
-    """Continuous 24/7 background worker scheduler that triggers registered workers according to their cron schedules."""
+    """Desktop-first background worker scheduler that triggers workers based on elapsed intervals or cron schedules."""
 
     def __init__(
         self,
         workers: list[BaseWorker],
+        db: Optional[DatabaseManager] = None,
         tick_interval_seconds: float = 15.0,
         heartbeat_interval_ticks: int = 40,  # ~10 minutes at 15s ticks
         *args: Any,
         **kwargs: Any,
     ) -> None:
         self.workers = workers
+        self.db = db
         self._tick_interval = tick_interval_seconds
         self._heartbeat_interval = heartbeat_interval_ticks
         self._tick_count = 0
@@ -58,10 +62,13 @@ class WorkerRunner:
     def run_tick(self, now_dt: datetime | None = None) -> list[str]:
         """Runs a single scheduler tick.
 
-        Evaluates registered workers with complete exception containment so one misconfigured worker never breaks the runner.
+        Evaluates registered workers using database elapsed intervals and cron matching with complete exception isolation.
         """
-        dt = now_dt or datetime.now().astimezone()
-        minute_key = dt.strftime("%Y-%m-%d %H:%M")
+        ref_now = now_dt or datetime.now(timezone.utc)
+        if ref_now.tzinfo is None:
+            ref_now = ref_now.replace(tzinfo=timezone.utc)
+
+        minute_key = ref_now.strftime("%Y-%m-%d %H:%M")
         triggered: list[str] = []
 
         for worker in self.workers:
@@ -83,105 +90,129 @@ class WorkerRunner:
             else:
                 meta.last_skip_reason = None
 
-            # 2. Get cron expression (fully isolated)
+            # 2. Check if due via persisted interval state in database
+            cron_expr = ""
+            cron_error = False
             try:
-                cron_expr = worker.get_cron(*self._extra_args, **self._extra_kwargs)
+                cron_expr = str(worker.get_cron(*self._extra_args, **self._extra_kwargs) or "").strip()
             except Exception as exc:
                 logger.error("[Worker:%s] Error getting cron expression: %s", name, exc, exc_info=True)
-                continue
+                cron_error = True
 
             meta.last_cron = cron_expr
-            if not cron_expr:
+            is_due = False
+
+            if cron_error:
                 continue
 
-            # 3. Check if cron matches current time (fully isolated)
-            try:
-                is_match = matches_cron(cron_expr, dt)
-            except Exception as exc:
-                logger.error("[Worker:%s] Invalid cron expression '%s': %s", name, cron_expr, exc)
+            if self.db:
+                try:
+                    with self.db.session_scope() as session:
+                        repo = WorkerStateRepository(session)
+                        is_due = repo.is_due(
+                            name=name,
+                            default_interval_minutes=worker.default_interval_minutes,
+                            default_enabled=True,
+                            now_dt=ref_now,
+                        )
+                except Exception as exc:
+                    logger.error("[Worker:%s] Error checking worker state: %s", name, exc, exc_info=True)
+                    is_due = False
+            else:
+                # Fallback in-memory evaluation (for tests without a db)
+                if cron_expr:
+                    try:
+                        is_due = matches_cron(cron_expr, ref_now)
+                    except Exception as exc:
+                        logger.error("[Worker:%s] Invalid cron expression '%s': %s", name, cron_expr, exc)
+                        is_due = False
+                else:
+                    is_due = (meta.last_run_at is None)
+
+            if not is_due:
                 continue
 
-            if not is_match:
-                continue
-
-            # 4. Deduplicate: do not execute multiple times in the same wall-clock minute
+            # 3. Deduplicate: do not execute multiple times in the same wall-clock minute
             if self._last_triggered_minutes.get(name) == minute_key:
                 continue
 
             self._last_triggered_minutes[name] = minute_key
             triggered.append(name)
-            logger.info("[Worker:%s] Triggered (cron='%s')", name, cron_expr)
-            self._dispatch(worker, cron_expr)
+            logger.info("[Worker:%s] Triggered (interval=%dm, cron='%s')", name, worker.default_interval_minutes, cron_expr)
+            self._dispatch(worker, cron_expr, now_dt=ref_now)
 
         return triggered
 
-    def _dispatch(self, worker: BaseWorker, cron_expr: str) -> None:
-        """Executes worker in an isolated thread so the 24/7 scheduler loop is never blocked."""
+    def _dispatch(self, worker: BaseWorker, cron_expr: str, now_dt: datetime | None = None) -> None:
+        """Executes worker in an isolated thread so the scheduler loop is never blocked."""
         t = threading.Thread(
             target=self._execute_safely,
-            args=(worker, cron_expr),
+            args=(worker, cron_expr, now_dt),
             name=f"worker-exec-{worker.name}",
             daemon=True,
         )
         t.start()
 
-    def _execute_safely(self, worker: BaseWorker, cron_expr: str) -> None:
+    def _execute_safely(self, worker: BaseWorker, cron_expr: str, now_dt: datetime | None = None) -> None:
         name = worker.name
         meta = self._meta.setdefault(name, WorkerRuntimeMeta())
         meta.last_status = "running"
-        meta.last_run_at = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S")
+
+        ref_now = now_dt or datetime.now(timezone.utc)
+        if ref_now.tzinfo is None:
+            ref_now = ref_now.replace(tzinfo=timezone.utc)
+        meta.last_run_at = ref_now.strftime("%Y-%m-%d %H:%M:%SZ")
 
         start_time = time.perf_counter()
         try:
             worker.execute(*self._extra_args, **self._extra_kwargs)
-            duration = time.perf_counter() - start_time
-            meta.last_duration_s = round(duration, 2)
+            duration = round(time.perf_counter() - start_time, 2)
+
+            # Persist success in worker_states table
+            if self.db:
+                try:
+                    with self.db.session_scope() as session:
+                        WorkerStateRepository(session).record_success(name, duration, now_dt=ref_now)
+                except Exception as db_exc:
+                    logger.warning("[Worker:%s] Failed to record state in DB: %s", name, db_exc)
+
+            meta.last_duration_s = duration
             meta.last_status = "success"
             meta.last_error = None
 
-            next_dt = next_cron_run(cron_expr)
-            next_str = next_dt.strftime("%Y-%m-%d %H:%M") if next_dt else "unknown"
-            logger.info(
-                "[Worker:%s] Completed in %.2fs (next run: %s)",
-                name,
-                duration,
-                next_str,
-            )
+            logger.info("[Worker:%s] Completed in %.2fs", name, duration)
         except Exception as exc:
-            duration = time.perf_counter() - start_time
-            meta.last_duration_s = round(duration, 2)
+            duration = round(time.perf_counter() - start_time, 2)
+
+            # Persist failure in worker_states table
+            if self.db:
+                try:
+                    with self.db.session_scope() as session:
+                        WorkerStateRepository(session).record_failure(name, duration, str(exc), now_dt=ref_now)
+                except Exception as db_exc:
+                    logger.warning("[Worker:%s] Failed to record state in DB: %s", name, db_exc)
+
+            meta.last_duration_s = duration
             meta.last_status = "error"
             meta.last_error = str(exc)
 
-            next_dt = next_cron_run(cron_expr)
-            next_str = next_dt.strftime("%Y-%m-%d %H:%M") if next_dt else "unknown"
-            logger.error(
-                "[Worker:%s] Failed after %.2fs: %s (next run: %s)",
-                name,
-                duration,
-                exc,
-                next_str,
-                exc_info=True,
-            )
+            logger.error("[Worker:%s] Failed after %.2fs: %s", name, duration, exc, exc_info=True)
 
     def _log_heartbeat(self) -> None:
-        """Logs periodic status summary of all workers with last-run and next-run details."""
+        """Logs periodic status summary of all workers."""
         for worker in self.workers:
             name = worker.name
             meta = self._meta.get(name) or WorkerRuntimeMeta()
-            cron_expr = meta.last_cron or "* * * * *"
-            next_dt = next_cron_run(cron_expr)
-            next_str = next_dt.strftime("%Y-%m-%d %H:%M") if next_dt else "not scheduled"
             last_run_str = (
                 f"{meta.last_run_at} [{meta.last_status}, {meta.last_duration_s}s]"
                 if meta.last_run_at
                 else "never"
             )
             logger.info(
-                "[Worker:runner] Status '%s': last run: %s, next run: %s",
+                "[Worker:runner] Status '%s': last run: %s, interval: %dm",
                 name,
                 last_run_str,
-                next_str,
+                worker.default_interval_minutes,
             )
 
     def start(self) -> None:

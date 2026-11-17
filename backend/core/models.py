@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from backend.core.constants import DEFAULT_SCAN_SENDER_KEYWORDS, DEFAULT_SCAN_SUBJECT_KEYWORDS
@@ -190,3 +190,17 @@ class ProcessedEmail(Base, SerializerMixin):
     sender: Mapped[str] = mapped_column(String(160), nullable=False, default="")
     received_at: Mapped[str] = mapped_column(String(32), nullable=False, default="")
     processed_at: Mapped[str] = mapped_column(String(32), nullable=False, default=now_iso, index=True)
+
+
+class WorkerState(Base, SerializerMixin):
+    __tablename__ = "worker_states"
+
+    name: Mapped[str] = mapped_column(String(64), primary_key=True)
+    last_run_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    last_status: Mapped[str] = mapped_column(String(20), nullable=False, default="never_run")
+    last_duration_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    interval_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
+    threshold_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_enabled: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    updated_at: Mapped[str] = mapped_column(String(40), nullable=False, default=now_iso)

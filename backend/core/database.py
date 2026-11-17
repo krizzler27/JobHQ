@@ -6,7 +6,9 @@ from typing import Iterator
 
 from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from backend.core.config import config
 from backend.core.constants import VALID_LLM_BACKENDS
 from backend.core.models import Base, ImapConfig, ProfileSettings, now_iso
 
@@ -19,17 +21,22 @@ class DatabaseManager:
         self._db_file: str | None = None
         if self._is_memory:
             url = "sqlite:///:memory:"
+            pool_kwargs = {"poolclass": StaticPool}
+        elif db_path and db_path.startswith("sqlite:///"):
+            url = db_path
+            self._db_file = db_path[len("sqlite:///"):]
+            pool_kwargs = {}
         else:
-            base_dir = os.path.join(os.getcwd(), "data")
-            os.makedirs(base_dir, exist_ok=True)
-            resolved = db_path or os.path.join(base_dir, "job_tracker.db")
+            resolved = str(db_path) if db_path else str(config.db_path)
             self._db_file = resolved
             url = f"sqlite:///{resolved}"
+            pool_kwargs = {}
 
         self.engine = create_engine(
             url,
             connect_args={"check_same_thread": False, "timeout": 15},
             future=True,
+            **pool_kwargs,
         )
 
         @event.listens_for(self.engine, "connect")
@@ -50,7 +57,6 @@ class DatabaseManager:
 
     def init_schema(self) -> None:
         Base.metadata.create_all(self.engine)
-        self._migrate_missing_columns()
         self._ensure_indexes()
         with self.session_scope() as session:
             if not session.get(ProfileSettings, 1):
@@ -64,44 +70,6 @@ class DatabaseManager:
                 )
             if not session.get(ImapConfig, 1):
                 session.add(ImapConfig(id=1, updated_at=now_iso()))
-
-    def _migrate_missing_columns(self) -> None:
-        inspector = inspect(self.engine)
-        table_names = set(inspector.get_table_names())
-        with self.engine.begin() as conn:
-            if "profile_settings" in table_names:
-                existing_cols = {c["name"] for c in inspector.get_columns("profile_settings")}
-                additions = {
-                    "onboarding_completed": "INTEGER NOT NULL DEFAULT 0",
-                    "llm_backend": "VARCHAR(40) NOT NULL DEFAULT 'rules'",
-                    "llm_endpoint": "VARCHAR(255) NOT NULL DEFAULT 'http://localhost:8080'",
-                    "llm_model_path": "VARCHAR(255) NOT NULL DEFAULT ''",
-                    "llm_threads": "INTEGER NOT NULL DEFAULT 4",
-                    "scan_subject_keywords": "TEXT NOT NULL DEFAULT ''",
-                    "scan_sender_keywords": "TEXT NOT NULL DEFAULT ''",
-                    "scan_exclude_keywords": "TEXT NOT NULL DEFAULT '[]'",
-                    "auto_sync_enabled": "INTEGER NOT NULL DEFAULT 0",
-                    "auto_sync_cron": "VARCHAR(80) NOT NULL DEFAULT '0 */4 * * *'",
-                    "auto_sync_days": "INTEGER NOT NULL DEFAULT 7",
-                }
-                for col_name, col_def in additions.items():
-                    if col_name not in existing_cols:
-                        conn.execute(
-                            text(f"ALTER TABLE profile_settings ADD COLUMN {col_name} {col_def}")
-                        )
-
-            for table_name in ("applications", "interviews", "job_alerts"):
-                if table_name in table_names:
-                    cols = {c["name"] for c in inspector.get_columns(table_name)}
-                    if "job_url" not in cols:
-                        conn.execute(
-                            text(f"ALTER TABLE {table_name} ADD COLUMN job_url TEXT NOT NULL DEFAULT ''")
-                        )
-
-            if "applications" in table_names:
-                conn.execute(
-                    text("UPDATE applications SET status = 'applied' WHERE status = 'screening'")
-                )
 
     def _ensure_indexes(self) -> None:
         index_ddls = (

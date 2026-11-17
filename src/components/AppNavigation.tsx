@@ -4,18 +4,25 @@ import {
   Briefcase,
   Calendar,
   CalendarDays,
+  ChevronDown,
   Columns3,
   Inbox,
   LayoutDashboard,
   Mail,
+  Moon,
+  Monitor,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
   RefreshCw,
   SlidersHorizontal,
+  Sun,
 } from 'lucide-react';
 import { describeCron, formatLocalDateTime, formatLocalDateTimeTooltip } from '../utils/appHelpers';
+import { LookbackDropdown } from './LookbackDropdown';
 import type { ImapStatus } from '../types';
+
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 export type NavTab =
   | 'overview'
@@ -47,6 +54,8 @@ export interface AppSidebarProps {
   upcomingInterviewsCount: number;
   imap?: ImapStatus | null;
   onOpenImapModal: () => void;
+  theme?: ThemeMode;
+  onSelectTheme?: (theme: ThemeMode) => void;
 }
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({
@@ -58,34 +67,66 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   upcomingInterviewsCount,
   imap,
   onOpenImapModal,
+  theme = 'system',
+  onSelectTheme,
 }) => {
   return (
     <aside
-      aria-hidden={!sidebarOpen}
-      className={`shrink-0 bg-white overflow-hidden transition-[width,opacity] duration-200 ease-in-out ${
-        sidebarOpen
-          ? 'w-60 border-r border-slate-200 opacity-100'
-          : 'w-0 border-r-0 opacity-0 pointer-events-none'
+      className={`sticky top-0 h-screen max-h-screen overflow-hidden shrink-0 bg-[#fcfbf9] dark:bg-[#111622] border-r border-[#e5e3dc] dark:border-slate-800/90 transition-[width] duration-200 ease-in-out z-30 flex flex-col justify-between ${
+        sidebarOpen ? 'w-60' : 'w-16'
       }`}
     >
-      <div className="w-60 h-full min-h-screen flex flex-col justify-between">
-        <div>
-          <div className="h-14 pl-5 pr-3 flex items-center justify-between border-b border-slate-200">
-            <span className="font-display text-base font-bold tracking-tight text-slate-900 whitespace-nowrap">
-              Job Tracker
-            </span>
-            <button
-              type="button"
-              onClick={onToggleSidebar}
-              title="Close sidebar"
-              aria-label="Close sidebar"
-              aria-expanded={sidebarOpen}
-              className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-            >
-              <PanelLeftClose className="w-4 h-4" />
-            </button>
+      {/* Top Header / Logo */}
+      {sidebarOpen ? (
+        <div className="h-14 px-4 flex items-center justify-between border-b border-[#e5e3dc] dark:border-slate-800/80 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img
+              src="/img/Logo Icon Light No BG.png"
+              alt="JobHQ Logo"
+              className="w-7 h-7 object-contain shrink-0"
+            />
+            <img
+              src="/img/Logo Text Light No BG.png"
+              alt="JobHQ"
+              className="h-6.5 w-auto object-contain shrink-0"
+            />
           </div>
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            title="Collapse sidebar"
+            aria-label="Collapse sidebar"
+            aria-expanded={true}
+            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-[#eeece6] dark:hover:bg-slate-800/60 transition-colors shrink-0 cursor-pointer"
+          >
+            <PanelLeftClose className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="h-14 flex items-center justify-center border-b border-[#e5e3dc] dark:border-slate-800/80 shrink-0">
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            title="Expand sidebar"
+            aria-label="Expand sidebar"
+            aria-expanded={false}
+            className="relative w-10 h-10 rounded-xl flex items-center justify-center hover:bg-[#eeece6]/80 dark:hover:bg-slate-800/60 transition-colors group cursor-pointer"
+          >
+            <img
+              src="/img/Logo Icon Light No BG.png"
+              alt="JobHQ"
+              className="w-7 h-7 object-contain transition-opacity duration-150 group-hover:opacity-0"
+            />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-[#234aff]">
+              <PanelLeftOpen className="w-5 h-5" />
+            </div>
+          </button>
+        </div>
+      )}
 
+      {/* Navigation Links */}
+      <div className="overflow-y-auto min-h-0 flex-1">
+        {sidebarOpen ? (
           <nav className="p-3 space-y-1">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
@@ -95,23 +136,29 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   key={item.id}
                   type="button"
                   onClick={() => onSelectTab(item.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                  className={`w-full flex items-center justify-between px-3 py-2 text-[13px] rounded-lg transition-all whitespace-nowrap ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      ? 'bg-[#234aff]/10 dark:bg-blue-950/40 text-[#234aff] dark:text-blue-400 font-semibold border-l-[3px] border-[#234aff] dark:border-blue-500 pl-2.5'
+                      : 'text-stone-600 dark:text-slate-400 hover:bg-[#eeece6]/60 dark:hover:bg-slate-800/50 hover:text-stone-900 dark:hover:text-slate-200 font-medium border-l-[3px] border-transparent'
                   }`}
                 >
                   <span className="flex items-center gap-2.5">
-                    <Icon className="w-4 h-4 shrink-0" />
+                    <Icon
+                      className={`w-4 h-4 shrink-0 ${
+                        isActive
+                          ? 'text-[#234aff] dark:text-blue-400'
+                          : 'text-stone-400 dark:text-slate-500'
+                      }`}
+                    />
                     <span>{item.label}</span>
                   </span>
                   {item.id === 'alerts' && relevantAlertsCount > 0 && (
-                    <span className="font-mono-tabular text-[11px] text-blue-700">
+                    <span className="font-mono-tabular text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-[#234aff]/10 dark:bg-blue-900/60 text-[#234aff] dark:text-blue-300">
                       {relevantAlertsCount}
                     </span>
                   )}
                   {item.id === 'interviews' && upcomingInterviewsCount > 0 && (
-                    <span className="font-mono-tabular text-[11px] text-slate-500">
+                    <span className="font-mono-tabular text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-[#eeece6] dark:bg-slate-800 text-stone-700 dark:text-slate-400">
                       {upcomingInterviewsCount}
                     </span>
                   )}
@@ -119,34 +166,74 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               );
             })}
           </nav>
-        </div>
+        ) : (
+          <nav className="p-2 space-y-1.5 flex flex-col items-center">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onSelectTab(item.id)}
+                  title={item.label}
+                  aria-label={item.label}
+                  className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                    isActive
+                      ? 'bg-[#234aff] text-white shadow-xs'
+                      : 'text-stone-500 dark:text-slate-400 hover:bg-[#eeece6] dark:hover:bg-slate-800/60 hover:text-stone-900 dark:hover:text-slate-100'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {item.id === 'alerts' && relevantAlertsCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#234aff] ring-2 ring-[#fcfbf9] dark:ring-[#111622]" />
+                  )}
+                  {item.id === 'interviews' && upcomingInterviewsCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#fcfbf9] dark:ring-[#111622]" />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </div>
 
-        <div className="p-3.5 border-t border-slate-200 space-y-2.5">
+      {/* Bottom Section */}
+      {sidebarOpen ? (
+        <div className="p-3 border-t border-[#e5e3dc] dark:border-slate-800/80 shrink-0">
           {imap?.connected ? (
-            <div className="space-y-2">
-              <div className="text-xs">
-                <div className="font-medium text-slate-900 capitalize truncate">
-                  {imap.provider === 'custom' ? 'Email' : imap.provider}
+            <div className="studio-card p-3 rounded-xl space-y-2 border border-[#e5e3dc] dark:border-slate-800">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20 shrink-0" />
+                  <span className="font-semibold text-stone-900 dark:text-slate-100 capitalize truncate text-xs">
+                    {imap.provider === 'custom' ? 'Email' : imap.provider}
+                  </span>
                 </div>
-                <div className="text-slate-500 truncate">{imap.email}</div>
+                <button
+                  type="button"
+                  onClick={onOpenImapModal}
+                  className="text-[11px] font-semibold text-[#234aff] hover:underline shrink-0"
+                >
+                  Configure
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={onOpenImapModal}
-                className="w-full px-2.5 py-1.5 text-[11px] font-medium text-slate-700 border border-slate-200 hover:bg-slate-50 rounded whitespace-nowrap"
+              <div
+                title={imap.email}
+                className="text-[11px] font-mono-tabular text-stone-500 dark:text-slate-400 truncate max-w-full"
               >
-                Change Email
-              </button>
+                {imap.email}
+              </div>
             </div>
           ) : (
-            <div className="space-y-2">
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Connect your email to automatically track job replies and interviews.
+            <div className="studio-card p-3 rounded-xl space-y-2 border border-[#e5e3dc] dark:border-slate-800">
+              <p className="text-[11px] text-stone-500 dark:text-slate-400 leading-snug">
+                Connect your inbox to track applications &amp; interviews.
               </p>
               <button
                 type="button"
                 onClick={onOpenImapModal}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md whitespace-nowrap"
+                className="btn-cobalt w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg shadow-xs"
               >
                 <Mail className="w-3.5 h-3.5" />
                 Connect Email
@@ -154,7 +241,24 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             </div>
           )}
         </div>
-      </div>
+      ) : (
+        <div className="p-2 border-t border-[#e5e3dc] dark:border-slate-800/80 flex flex-col items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onOpenImapModal}
+            title={imap?.connected ? `Connected: ${imap.email}` : 'Connect Email'}
+            aria-label="Email settings"
+            className="relative w-10 h-10 rounded-xl flex items-center justify-center text-stone-500 dark:text-slate-400 hover:bg-[#eeece6] dark:hover:bg-slate-800/60 hover:text-stone-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
+          >
+            <Mail className="w-4 h-4" />
+            {imap?.connected ? (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#fcfbf9] dark:ring-[#111622]" />
+            ) : (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-[#fcfbf9] dark:ring-[#111622]" />
+            )}
+          </button>
+        </div>
+      )}
     </aside>
   );
 };
@@ -193,28 +297,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenImapModal,
 }) => {
   return (
-    <header className="h-14 px-6 bg-white border-b border-slate-200 flex items-center justify-between gap-8">
+    <header className="h-14 px-6 bg-[#fcfbf9] dark:bg-[#111622] border-b border-[#e5e3dc] dark:border-slate-800/90 flex items-center justify-between gap-6 transition-colors">
       <div className="flex items-center gap-3 min-w-0">
-        {!sidebarOpen && (
-          <button
-            type="button"
-            onClick={onToggleSidebar}
-            title="Open sidebar"
-            aria-label="Open sidebar"
-            aria-expanded={false}
-            className="p-1.5 -ml-1.5 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0"
-          >
-            <PanelLeftOpen className="w-4 h-4" />
-          </button>
-        )}
         <div className="flex items-baseline gap-3 min-w-0">
-          <h1 className="font-display text-base font-semibold text-slate-900 whitespace-nowrap shrink-0">
+          <h1 className="font-display text-base font-semibold text-stone-900 dark:text-slate-100 tracking-tight whitespace-nowrap shrink-0">
             {activeNavTitle}
           </h1>
           {lastSyncAt && (
             <span
               title={formatLocalDateTimeTooltip(lastSyncAt)}
-              className="hidden sm:inline text-xs text-slate-500 font-mono-tabular truncate"
+              className="hidden sm:inline text-xs text-stone-400 dark:text-slate-500 font-mono-tabular truncate"
             >
               Last sync {formatLocalDateTime(lastSyncAt)}
             </span>
@@ -226,33 +318,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   ? `Schedule: ${autoSyncCron} · Next run: ${new Date(nextAutoSyncAt).toLocaleString()}`
                   : `Schedule: ${autoSyncCron}`
               }
-              className="hidden md:inline text-xs text-blue-700 whitespace-nowrap"
+              className="hidden md:inline text-xs text-[#234aff] dark:text-blue-400 font-medium whitespace-nowrap"
             >
-              Auto-sync: {describeCron(autoSyncCron)}
+              Auto: {describeCron(autoSyncCron)}
             </span>
           )}
         </div>
       </div>
 
       <div className="flex items-center gap-2.5 shrink-0">
-        <select
-          aria-label="Email time range"
-          title="How far back to check emails"
+        <LookbackDropdown
           value={syncDays}
-          onChange={(e) => onChangeSyncDays(Number(e.target.value))}
-          className="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-md text-slate-700 focus:border-blue-600 focus:outline-none"
-        >
-          <option value={3}>Last 3 days</option>
-          <option value={7}>Last 7 days</option>
-          <option value={30}>Last 30 days</option>
-          <option value={90}>Last 90 days</option>
-          <option value={180}>Last 180 days</option>
-        </select>
+          disabled={syncing}
+          onChange={onChangeSyncDays}
+        />
 
         <button
           type="button"
           onClick={onOpenAddApp}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-md whitespace-nowrap shrink-0"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700/80 hover:bg-[#f6f5f2] dark:hover:bg-slate-800 rounded-lg whitespace-nowrap shrink-0 shadow-2xs transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
           Add Job
@@ -263,7 +347,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             type="button"
             onClick={onSyncInbox}
             disabled={syncing}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md whitespace-nowrap shrink-0 disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-[#234aff] hover:bg-[#1938d8] rounded-lg whitespace-nowrap shrink-0 disabled:opacity-60 shadow-xs transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? 'Syncing...' : 'Sync Inbox'}
@@ -272,7 +356,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <button
             type="button"
             onClick={onOpenImapModal}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md whitespace-nowrap shrink-0"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-[#234aff] hover:bg-[#1938d8] rounded-lg whitespace-nowrap shrink-0 shadow-xs transition-colors"
           >
             <Mail className="w-3.5 h-3.5" />
             Connect Email

@@ -20,6 +20,7 @@ import type {
   ProfileSettings,
   StatsSummary,
   SyncJobStatus,
+  WorkerConfig,
 } from './types';
 
 export interface AlertConvertPayload {
@@ -101,7 +102,7 @@ export const api = {
   disconnectImap: () =>
     request<{ status: ImapStatus }>('/api/imap/disconnect', { method: 'DELETE' }),
 
-  syncImap: (days = 30, force_rescan = false) =>
+  syncImap: (days = 1, force_rescan = false) =>
     request<SyncJobStatus>('/api/imap/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -334,6 +335,24 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }),
+
+  getWorkers: () => request<WorkerConfig[]>('/api/workers'),
+
+  updateWorker: (
+    name: string,
+    payload: { interval_minutes?: number; is_enabled?: boolean; threshold_days?: number }
+  ) =>
+    request<WorkerConfig>(`/api/workers/${encodeURIComponent(name)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+
+  runWorkerNow: (name: string) =>
+    request<{ name: string; status: string; duration_seconds: number; message: string }>(
+      `/api/workers/${encodeURIComponent(name)}/run`,
+      { method: 'POST' }
+    ),
 };
 
 export const APPLICATION_STAGES: {
