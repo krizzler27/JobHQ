@@ -330,3 +330,32 @@ export interface EmailFilterContext {
   suggested_noise_terms: string[];
 }
 
+export interface WorkerIntervalOption {
+  label: string;
+  minutes: number;
+}
+
+export interface WorkerThresholdOption {
+  label: string;
+  value: number;
+}
+
+export interface WorkerConfig {
+  name: string;
+  title: string;
+  category: string;
+  description: string;
+  interval_minutes: number;
+  unit: string;
+  interval_options: WorkerIntervalOption[];
+  threshold_days?: number | null;
+  threshold_label?: string | null;
+  threshold_options?: WorkerThresholdOption[] | null;
+  is_enabled: boolean;
+  last_run_at: string | null;
+  last_status: 'never_run' | 'success' | 'failed' | 'running';
+  last_duration_seconds: number | null;
+  last_error: string | null;
+  updated_at: string | null;
+}
+

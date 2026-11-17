@@ -13,6 +13,8 @@ logger = logging.getLogger("job_tracker.workers.interview_lifecycle")
 class InterviewLifecycleWorker(BaseWorker):
     """Checks scheduled interviews and marks past ones as completed via JobHQLifecycleService."""
 
+    default_interval_minutes: int = 60
+
     def __init__(
         self,
         db: DatabaseManager,

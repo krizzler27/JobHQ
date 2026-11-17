@@ -14,6 +14,8 @@ logger = logging.getLogger("job_tracker.workers.email_job_sync")
 class EmailJobSyncWorker(BaseWorker):
     """Worker responsible for fetching and synchronizing job emails via IMAP."""
 
+    default_interval_minutes: int = 4 * 60
+
     def __init__(self, db: DatabaseManager, sync_jobs: SyncJobManager) -> None:
         self.db = db
         self.sync_jobs = sync_jobs

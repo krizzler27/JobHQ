@@ -323,3 +323,18 @@ class JobAlertRepository(BaseRepository[JobAlert]):
             "application": app_row.to_dict(),
             "interview": iv_dict,
         }
+
+    def delete_stale_unapplied(self, cutoff_date: str) -> int:
+        """Deletes unreviewed or dismissed alerts received before cutoff_date, never touching applied alerts."""
+        if not cutoff_date:
+            return 0
+        stmt = select(JobAlert).where(
+            JobAlert.status.in_(("suggested", "dismissed")),
+            func.substr(JobAlert.received_at, 1, 10) < cutoff_date,
+        )
+        rows = list(self.session.scalars(stmt))
+        for row in rows:
+            self.session.delete(row)
+        if rows:
+            self.session.flush()
+        return len(rows)

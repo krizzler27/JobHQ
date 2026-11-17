@@ -1,15 +1,21 @@
 """Unit tests for the generic worker runner and EmailJobSyncWorker."""
 
+import os
+import tempfile
 import time
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 from backend.core.database import DatabaseManager
+from backend.repositories.alerts import JobAlertRepository
 from backend.repositories.applications import ApplicationRepository
 from backend.repositories.imap_config import ImapConfigRepository
 from backend.repositories.interviews import InterviewRepository
 from backend.repositories.profile import ProfileRepository
+from backend.repositories.worker_state import WorkerStateRepository
+from backend.workers.alert_cleanup import AlertCleanupWorker
+from backend.workers.auto_backup import AutoBackupWorker
 from backend.workers.auto_ghost import AutoGhostWorker
 from backend.workers.core.base import BaseWorker
 from backend.workers.core.runner import WorkerRunner
@@ -243,6 +249,146 @@ class WorkerSubsystemTests(unittest.TestCase):
 
             self.assertIsNotNone(updated_fresh)
             self.assertEqual(updated_fresh.status, "applied")
+
+    def test_worker_state_repository_interval_checks(self) -> None:
+        db = DatabaseManager(":memory:")
+        db.init_schema()
+
+        now = datetime(2026, 11, 17, 12, 0, tzinfo=timezone.utc)
+
+        with db.session_scope() as session:
+            repo = WorkerStateRepository(session)
+            # Never run before -> is_due should be True
+            self.assertTrue(repo.is_due("auto_backup", default_interval_minutes=10080, now_dt=now))
+
+            # Record success
+            repo.record_success("auto_backup", duration_seconds=1.5, now_dt=now)
+
+            # Check 1 hour later (elapsed 60m < 10080m) -> is_due should be False
+            one_hour_later = now + timedelta(hours=1)
+            self.assertFalse(repo.is_due("auto_backup", default_interval_minutes=10080, now_dt=one_hour_later))
+
+            # Check 8 days later (elapsed > 10080m) -> is_due should be True
+            eight_days_later = now + timedelta(days=8)
+            self.assertTrue(repo.is_due("auto_backup", default_interval_minutes=10080, now_dt=eight_days_later))
+
+    def test_runner_desktop_elapsed_interval_execution(self) -> None:
+        db = DatabaseManager(":memory:")
+        db.init_schema()
+
+        w = DummyTestWorker(name="test_interval", enabled=True)
+        w.default_interval_minutes = 60
+
+        runner = WorkerRunner(workers=[w], db=db)
+        dt_start = datetime(2026, 11, 17, 10, 0, tzinfo=timezone.utc)
+
+        # 1st run (never run before) -> triggers!
+        triggered1 = runner.run_tick(now_dt=dt_start)
+        self.assertIn("test_interval", triggered1)
+
+        # Wait for thread execution to finish and record in DB
+        for _ in range(20):
+            meta = runner.get_meta("test_interval")
+            if meta and meta.last_status == "success":
+                break
+            time.sleep(0.05)
+
+        # 2nd run 15 mins later (app closed and reopened) -> skipped!
+        dt_15m = dt_start + timedelta(minutes=15)
+        triggered2 = runner.run_tick(now_dt=dt_15m)
+        self.assertEqual(triggered2, [])
+
+        # 3rd run 65 mins later -> triggers again!
+        dt_65m = dt_start + timedelta(minutes=65)
+        triggered3 = runner.run_tick(now_dt=dt_65m)
+        self.assertIn("test_interval", triggered3)
+
+    def test_auto_backup_worker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "test.db")
+            backup_dir = os.path.join(tmp_dir, "backups")
+
+            db = DatabaseManager(db_path)
+            db.init_schema()
+
+            worker = AutoBackupWorker(db=db, backup_dir=backup_dir)
+            self.assertEqual(worker.name, "auto_backup")
+            self.assertTrue(worker.is_enabled())
+            self.assertEqual(worker.default_interval_minutes, 10080)
+
+            # Execute backup
+            worker.execute()
+
+            # Verify backup file created
+            latest_backup = os.path.join(backup_dir, "jobhq_latest.db")
+            self.assertTrue(os.path.isfile(latest_backup))
+            self.assertGreater(os.path.getsize(latest_backup), 0)
+
+            # Run a second time to verify .bak rotation
+            worker.execute()
+            bak_file = os.path.join(backup_dir, "jobhq_latest.db.bak")
+            self.assertTrue(os.path.isfile(bak_file))
+
+            # Dispose engine so SQLite lock is released on Windows
+            db.engine.dispose()
+
+    def test_alert_cleanup_worker(self) -> None:
+        db = DatabaseManager(":memory:")
+        db.init_schema()
+
+        # Seed alerts:
+        # 1. 10 days old suggested (should be deleted)
+        # 2. 10 days old dismissed (should be deleted)
+        # 3. 10 days old applied (MUST BE PRESERVED!)
+        # 4. 2 days old suggested (should be kept)
+        with db.session_scope() as session:
+            repo = JobAlertRepository(session)
+            a_old_sugg = repo.create({
+                "job_title": "Old Sugg",
+                "source_app": "LinkedIn",
+                "received_at": "2026-11-01T10:00:00Z",
+                "status": "suggested",
+            })
+            a_old_dism = repo.create({
+                "job_title": "Old Dism",
+                "source_app": "Indeed",
+                "received_at": "2026-11-01T10:00:00Z",
+                "status": "dismissed",
+            })
+            a_old_app = repo.create({
+                "job_title": "Old Applied",
+                "source_app": "Otta",
+                "received_at": "2026-11-01T10:00:00Z",
+                "status": "applied",
+            })
+            a_fresh = repo.create({
+                "job_title": "Fresh Sugg",
+                "source_app": "Wellfound",
+                "received_at": "2026-11-16T10:00:00Z",
+                "status": "suggested",
+            })
+            old_sugg_id = a_old_sugg.id
+            old_dism_id = a_old_dism.id
+            old_app_id = a_old_app.id
+            fresh_id = a_fresh.id
+
+        worker = AlertCleanupWorker(db=db, days_threshold=5)
+        self.assertEqual(worker.name, "alert_cleanup")
+        self.assertTrue(worker.is_enabled())
+        self.assertEqual(worker.default_interval_minutes, 7200)
+
+        # Execute alert cleanup
+        worker.execute()
+
+        # Verify results
+        with db.session_scope() as session:
+            repo = JobAlertRepository(session)
+            self.assertIsNone(repo.get(old_sugg_id))
+            self.assertIsNone(repo.get(old_dism_id))
+
+            # Applied and fresh must remain!
+            self.assertIsNotNone(repo.get(old_app_id))
+            self.assertIsNotNone(repo.get(fresh_id))
 
 
 if __name__ == "__main__":

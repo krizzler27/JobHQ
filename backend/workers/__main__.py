@@ -5,6 +5,8 @@ import sys
 
 from backend.core.database import DatabaseManager
 from backend.services.sync import ImapSyncService, SyncJobManager
+from backend.workers.alert_cleanup import AlertCleanupWorker
+from backend.workers.auto_backup import AutoBackupWorker
 from backend.workers.auto_ghost import AutoGhostWorker
 from backend.workers.core.runner import WorkerRunner
 from backend.workers.email_job_sync import EmailJobSyncWorker
@@ -31,9 +33,11 @@ def main() -> None:
         EmailJobSyncWorker(db=db, sync_jobs=sync_jobs),
         InterviewLifecycleWorker(db=db),
         AutoGhostWorker(db=db),
+        AutoBackupWorker(db=db),
+        AlertCleanupWorker(db=db),
     ]
 
-    runner = WorkerRunner(workers=workers)
+    runner = WorkerRunner(workers=workers, db=db)
     runner.run_forever()
 
 

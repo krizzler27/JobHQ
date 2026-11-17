@@ -23,6 +23,9 @@ import { describeCron } from '../utils/appHelpers';
 import { useToast } from '../context/ToastContext';
 import { EmailReaderPanel } from './EmailReaderPanel';
 import { BackupRestoreSection } from './BackupRestoreSection';
+import { BackgroundJobsSection } from './BackgroundJobsSection';
+import { ImapConnectionForm } from './ImapModal';
+import type { WorkerConfig } from '../types';
 
 interface ProfileSettingsViewProps {
   profile: ProfileSettings | null;
@@ -31,6 +34,7 @@ interface ProfileSettingsViewProps {
   onOpenImapModal: () => void;
   onOpenOnboarding: () => void;
   onDataRestored: () => Promise<void>;
+  onRefreshImap?: () => Promise<void>;
 }
 
 const parseList = (raw: string): string[] =>
@@ -270,7 +274,7 @@ export const FilterKeywordEditor: React.FC<FilterKeywordEditorProps> = ({
   );
 };
 
-type SettingsTab = 'preferences' | 'email-sync' | 'filters-ai' | 'backup';
+type SettingsTab = 'preferences' | 'email-sync' | 'filters-ai' | 'automation' | 'backup';
 
 export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   profile,
@@ -279,6 +283,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   onOpenImapModal,
   onOpenOnboarding,
   onDataRestored,
+  onRefreshImap,
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('preferences');
   const [targetTitles, setTargetTitles] = useState('');
@@ -300,7 +305,41 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   const [filterNotice, setFilterNotice] = useState('');
   const [saveError, setSaveError] = useState('');
 
+  const [workers, setWorkers] = useState<WorkerConfig[]>([]);
+  const [loadingWorkers, setLoadingWorkers] = useState(false);
+
   const { toast } = useToast();
+
+  const loadWorkers = async () => {
+    setLoadingWorkers(true);
+    try {
+      const data = await api.getWorkers();
+      setWorkers(data);
+    } catch {
+      // Background jobs fetch failure is non-fatal
+    } finally {
+      setLoadingWorkers(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'automation') {
+      loadWorkers();
+    }
+  }, [activeTab]);
+
+  const handleUpdateWorker = async (
+    name: string,
+    payload: { interval_minutes?: number; is_enabled?: boolean; threshold_days?: number }
+  ) => {
+    const updated = await api.updateWorker(name, payload);
+    setWorkers((prev) => prev.map((w) => (w.name === name ? updated : w)));
+  };
+
+  const handleRunWorker = async (name: string) => {
+    await api.runWorkerNow(name);
+    await loadWorkers();
+  };
 
   const skipFormSyncRef = useRef(false);
   const filterSaveSeqRef = useRef(0);
@@ -431,8 +470,9 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
 
   const tabs: { id: SettingsTab; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'preferences', label: 'Job Preferences', icon: Briefcase },
-    { id: 'email-sync', label: 'Email & Auto-Sync', icon: Mail },
+    { id: 'email-sync', label: 'Email Connection', icon: Mail },
     { id: 'filters-ai', label: 'Scan Filters & AI', icon: Sliders },
+    { id: 'automation', label: 'Background Jobs', icon: Cpu },
     { id: 'backup', label: 'Backups & Data', icon: Database },
   ];
 
@@ -451,13 +491,20 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenOnboarding}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl whitespace-nowrap shadow-2xs transition-colors"
+            >
+              Quick Setup
+            </button>
             {savedNotice && (
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-900/60">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 {savedNotice}
               </span>
             )}
-            {activeTab !== 'backup' && (
+            {activeTab !== 'backup' && activeTab !== 'automation' && activeTab !== 'email-sync' && (
               <button
                 type="button"
                 onClick={() => handleSave()}
@@ -582,73 +629,70 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
         </form>
       )}
 
-      {/* TAB 2: Email & Auto-Sync */}
+      {/* TAB 2: Email Connection */}
       {activeTab === 'email-sync' && (
-        <form onSubmit={handleSave} className="space-y-6">
-          {/* Email Connection Card */}
+        <div className="space-y-6">
+          {/* Email Connection Summary Card */}
           <div className="studio-card rounded-2xl border border-[#e5e3dc] dark:border-slate-800 p-6 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-start gap-3">
               <div className="p-2.5 rounded-xl bg-[#eeece6] dark:bg-slate-800 text-stone-700 dark:text-slate-200 shrink-0">
                 <Mail className="w-5 h-5 text-[#234aff]" />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-stone-900 dark:text-slate-100">Email Connection</h2>
+                <h2 className="text-sm font-semibold text-stone-900 dark:text-slate-100">Email Status</h2>
                 {imapStatus?.connected ? (
                   <p className="text-xs text-stone-600 dark:text-slate-400 mt-0.5">
-                    Connected to <span className="font-semibold text-stone-900 dark:text-slate-100">{imapStatus.email}</span>
+                    Currently connected to <span className="font-semibold text-stone-900 dark:text-slate-100">{imapStatus.email}</span>
                     {' · '}
                     <span className="font-mono-tabular">{imapStatus.host}</span>
                   </p>
                 ) : (
                   <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
-                    Connect Gmail, Outlook, Yahoo, or custom IMAP to sync jobs automatically.
+                    No email connected. Configure your IMAP account below to scan for job updates.
                   </p>
                 )}
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onOpenOnboarding}
-                className="px-3.5 py-1.5 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl whitespace-nowrap transition-colors"
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                  imapStatus?.connected
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/60'
+                    : 'bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-slate-400 border border-[#e5e3dc] dark:border-slate-700'
+                }`}
               >
-                Quick Setup
-              </button>
-              <button
-                type="button"
-                onClick={onOpenImapModal}
-                className="btn-cobalt px-3.5 py-1.5 text-xs font-semibold text-white rounded-xl whitespace-nowrap shadow-xs transition-colors"
-              >
-                {imapStatus?.connected ? 'Change Email' : 'Connect Email'}
-              </button>
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    imapStatus?.connected ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-stone-400'
+                  }`}
+                />
+                {imapStatus?.connected ? 'Connected' : 'Disconnected'}
+              </span>
             </div>
           </div>
 
-          {/* Auto-Sync Schedule Card */}
+          {/* Change / Configure Email Card */}
           <div className="studio-card rounded-2xl border border-[#e5e3dc] dark:border-slate-800 p-6 space-y-4">
-            <AutoSyncScheduleEditor
-              enabled={autoSyncEnabled}
-              cron={autoSyncCron}
-              lookbackDays={autoSyncDays}
-              nextRunAt={profile?.next_auto_sync_at}
-              onChangeEnabled={setAutoSyncEnabled}
-              onChangeCron={setAutoSyncCron}
-              onChangeLookbackDays={setAutoSyncDays}
-            />
-
-            <div className="pt-3 border-t border-[#e5e3dc] dark:border-slate-800 flex items-center justify-end">
-              <button
-                type="submit"
-                disabled={saving}
-                className="btn-cobalt inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white rounded-xl shadow-xs disabled:opacity-60 transition-all"
-              >
-                <Save className="w-3.5 h-3.5" />
-                {saving ? 'Saving...' : 'Save Schedule'}
-              </button>
+            <div className="pb-3 border-b border-[#e5e3dc] dark:border-slate-800">
+              <h3 className="text-sm font-semibold text-stone-900 dark:text-slate-100">
+                {imapStatus?.connected ? 'Change Email Credentials' : 'Connect Email Account'}
+              </h3>
+              <p className="text-xs text-stone-500 dark:text-slate-400 mt-0.5">
+                Your credentials are encrypted locally on your machine and used strictly to scan job applications and interviews.
+              </p>
             </div>
+
+            <ImapConnectionForm
+              initialStatus={imapStatus}
+              submitLabel={imapStatus?.connected ? 'Save & Reconnect' : 'Connect Email'}
+              onConnected={async () => {
+                toast.success('Email Connected', 'IMAP credentials verified and updated.');
+                if (onRefreshImap) await onRefreshImap();
+              }}
+            />
           </div>
-        </form>
+        </div>
       )}
 
       {/* TAB 3: Scan Filters & AI */}
@@ -749,7 +793,18 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
         </div>
       )}
 
-      {/* TAB 4: Backups & Data */}
+      {/* TAB 4: Background Jobs */}
+      {activeTab === 'automation' && (
+        <BackgroundJobsSection
+          workers={workers}
+          isLoading={loadingWorkers}
+          onRefresh={loadWorkers}
+          onUpdateWorker={handleUpdateWorker}
+          onRunWorker={handleRunWorker}
+        />
+      )}
+
+      {/* TAB 5: Backups & Data */}
       {activeTab === 'backup' && (
         <div className="space-y-6">
           <BackupRestoreSection onDataRestored={onDataRestored} />

@@ -13,6 +13,7 @@ from backend.api.routers import (
     interviews,
     llm,
     profile,
+    workers,
 )
 
 ALL_ROUTERS = (
@@ -26,6 +27,7 @@ ALL_ROUTERS = (
     llm.router,
     emails.router,
     backup.router,
+    workers.router,
 )
 
 

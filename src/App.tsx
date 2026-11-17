@@ -1237,11 +1237,15 @@ export default function App() {
           ) : (
             <ProfileSettingsView
               profile={profile}
-              imapStatus={imap || null}
+              imapStatus={dashboard?.imap || null}
               onSaveProfile={handleSaveProfile}
               onOpenImapModal={() => setShowImapModal(true)}
               onOpenOnboarding={() => setShowOnboarding(true)}
               onDataRestored={loadAllData}
+              onRefreshImap={async () => {
+                const dashRes = await api.getDashboard();
+                setDashboard(dashRes);
+              }}
             />
           )}
         </main>

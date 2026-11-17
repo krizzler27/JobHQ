@@ -6,6 +6,7 @@ from typing import Iterator
 
 from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from backend.core.constants import VALID_LLM_BACKENDS
 from backend.core.models import Base, ImapConfig, ProfileSettings, now_iso
@@ -19,17 +20,24 @@ class DatabaseManager:
         self._db_file: str | None = None
         if self._is_memory:
             url = "sqlite:///:memory:"
+            pool_kwargs = {"poolclass": StaticPool}
+        elif db_path and db_path.startswith("sqlite:///"):
+            url = db_path
+            self._db_file = db_path[len("sqlite:///"):]
+            pool_kwargs = {}
         else:
             base_dir = os.path.join(os.getcwd(), "data")
             os.makedirs(base_dir, exist_ok=True)
             resolved = db_path or os.path.join(base_dir, "job_tracker.db")
             self._db_file = resolved
             url = f"sqlite:///{resolved}"
+            pool_kwargs = {}
 
         self.engine = create_engine(
             url,
             connect_args={"check_same_thread": False, "timeout": 15},
             future=True,
+            **pool_kwargs,
         )
 
         @event.listens_for(self.engine, "connect")
@@ -97,6 +105,13 @@ class DatabaseManager:
                         conn.execute(
                             text(f"ALTER TABLE {table_name} ADD COLUMN job_url TEXT NOT NULL DEFAULT ''")
                         )
+
+            if "worker_states" in table_names:
+                worker_cols = {c["name"] for c in inspector.get_columns("worker_states")}
+                if "threshold_days" not in worker_cols:
+                    conn.execute(
+                        text("ALTER TABLE worker_states ADD COLUMN threshold_days INTEGER")
+                    )
 
             if "applications" in table_names:
                 conn.execute(
