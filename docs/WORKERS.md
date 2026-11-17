@@ -106,7 +106,7 @@ The daemon orchestrator:
 ### `AutoBackupWorker` ([auto_backup.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_backup.py))
 - Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.
 - Runs weekly by default (`default_interval_minutes = 10080` / 7 days).
-- Creates an atomic hot SQLite snapshot into `data/backups/jobhq_latest.db`, rotating existing copies to `.bak`. Avoids wasteful file duplication while protecting against disk or database corruption.
+- Creates an atomic hot SQLite snapshot into `~/.jobhq/backups/jobhq_latest.db`, rotating existing copies to `.bak`. Avoids wasteful file duplication while protecting against disk or database corruption.
 
 ### `AlertCleanupWorker` ([alert_cleanup.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/alert_cleanup.py))
 - Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.

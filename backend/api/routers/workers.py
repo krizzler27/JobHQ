@@ -115,7 +115,7 @@ WORKER_METADATA: dict[str, dict[str, Any]] = {
     "auto_backup": {
         "title": "Database Hot Backup",
         "category": "Safety & Recovery",
-        "description": "Periodically takes an atomic snapshot of your SQLite database into data/backups/jobhq_latest.db.",
+        "description": "Periodically takes an atomic snapshot of your SQLite database into ~/.jobhq/backups/jobhq_latest.db.",
         "default_interval_minutes": 10080,  # 7 days
         "unit": "days",
         "interval_options": [

@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from backend.core.database import DatabaseManager
+from backend.core.paths import get_default_backups_dir
 from backend.repositories.alerts import JobAlertRepository
 from backend.repositories.applications import ApplicationRepository
 from backend.repositories.interviews import InterviewRepository
@@ -78,11 +79,11 @@ class JobHQLifecycleService:
             return repo.delete_stale_unapplied(cutoff_date)
 
     def create_latest_backup(self, backup_dir: Optional[str] = None) -> str:
-        """Creates an atomic SQLite snapshot into data/backups/jobhq_latest.db, rotating prior copy to .bak."""
+        """Creates an atomic SQLite snapshot into ~/.jobhq/backups/jobhq_latest.db, rotating prior copy to .bak."""
         if self.db._is_memory or not self.db._db_file or not os.path.isfile(self.db._db_file):
             return ""
 
-        target_dir = backup_dir or os.path.join(os.path.dirname(self.db._db_file), "backups")
+        target_dir = backup_dir or get_default_backups_dir()
         os.makedirs(target_dir, exist_ok=True)
 
         latest_path = os.path.join(target_dir, "jobhq_latest.db")

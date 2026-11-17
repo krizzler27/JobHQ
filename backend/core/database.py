@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 
 from backend.core.constants import VALID_LLM_BACKENDS
 from backend.core.models import Base, ImapConfig, ProfileSettings, now_iso
+from backend.core.paths import get_default_db_path
 
 
 class DatabaseManager:
@@ -26,9 +27,7 @@ class DatabaseManager:
             self._db_file = db_path[len("sqlite:///"):]
             pool_kwargs = {}
         else:
-            base_dir = os.path.join(os.getcwd(), "data")
-            os.makedirs(base_dir, exist_ok=True)
-            resolved = db_path or os.path.join(base_dir, "job_tracker.db")
+            resolved = db_path or get_default_db_path()
             self._db_file = resolved
             url = f"sqlite:///{resolved}"
             pool_kwargs = {}

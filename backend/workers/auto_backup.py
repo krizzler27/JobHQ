@@ -1,4 +1,4 @@
-"""Worker that creates a rolling latest SQLite snapshot in data/backups/."""
+"""Worker that creates a rolling latest SQLite snapshot in ~/.jobhq/backups/."""
 
 import logging
 from typing import Any, Optional
