@@ -12,6 +12,8 @@ from backend.repositories.alerts import JobAlertRepository
 from backend.repositories.applications import ApplicationRepository
 from backend.repositories.imap_config import ImapConfigRepository
 from backend.repositories.interviews import InterviewRepository
+from backend.core.models import ProcessedEmail
+from backend.repositories.processed_emails import ProcessedEmailRepository
 from backend.repositories.profile import ProfileRepository
 from backend.repositories.worker_state import WorkerStateRepository
 from backend.workers.alert_cleanup import AlertCleanupWorker
@@ -19,6 +21,8 @@ from backend.workers.auto_backup import AutoBackupWorker
 from backend.workers.auto_ghost import AutoGhostWorker
 from backend.workers.core.base import BaseWorker
 from backend.workers.core.runner import WorkerRunner
+from backend.workers.db_maintenance import DbMaintenanceWorker
+from backend.workers.email_audit_prune import EmailAuditPruneWorker
 from backend.workers.email_job_sync import EmailJobSyncWorker
 from backend.workers.interview_lifecycle import InterviewLifecycleWorker
 
@@ -389,6 +393,69 @@ class WorkerSubsystemTests(unittest.TestCase):
             # Applied and fresh must remain!
             self.assertIsNotNone(repo.get(old_app_id))
             self.assertIsNotNone(repo.get(fresh_id))
+
+    def test_email_audit_prune_worker(self) -> None:
+        db = DatabaseManager(":memory:")
+        db.init_schema()
+
+        with db.session_scope() as session:
+            repo = ProcessedEmailRepository(session)
+            # Old log (>7 days ago)
+            repo.upsert(
+                message_id="msg-old",
+                thread_id="th-old",
+                category="interview",
+                subject="Old Subject",
+                sender="recruiter@old.com",
+                received_at="2026-11-01T10:00:00Z",
+            )
+            # Backdate processed_at to 10 days ago
+            old_item = session.get(ProcessedEmail, "msg-old")
+            assert old_item is not None
+            old_item.processed_at = "2026-11-01T10:00:00Z"
+
+            # Fresh log (<7 days ago)
+            repo.upsert(
+                message_id="msg-fresh",
+                thread_id="th-fresh",
+                category="interview",
+                subject="Fresh Subject",
+                sender="recruiter@fresh.com",
+                received_at="2026-11-16T10:00:00Z",
+            )
+            session.flush()
+
+        worker = EmailAuditPruneWorker(db=db, days_threshold=7)
+        self.assertEqual(worker.name, "email_audit_prune")
+        self.assertTrue(worker.is_enabled())
+        self.assertEqual(worker.default_interval_minutes, 10080)
+
+        worker.execute()
+
+        with db.session_scope() as session:
+            repo = ProcessedEmailRepository(session)
+            # Both IDs still exist (deduplication intact!)
+            self.assertTrue(repo.is_processed("msg-old"))
+            self.assertTrue(repo.is_processed("msg-fresh"))
+
+            # Old row had metadata pruned
+            recent = {r.message_id: r for r in repo.list_recent(limit=10)}
+            self.assertEqual(recent["msg-old"].subject, "")
+            self.assertEqual(recent["msg-old"].sender, "")
+            # Fresh row retains metadata
+            self.assertEqual(recent["msg-fresh"].subject, "Fresh Subject")
+
+    def test_db_maintenance_worker(self) -> None:
+        db = DatabaseManager(":memory:")
+        db.init_schema()
+
+        worker = DbMaintenanceWorker(db=db)
+        self.assertEqual(worker.name, "db_maintenance")
+        self.assertTrue(worker.is_enabled())
+        self.assertEqual(worker.default_interval_minutes, 10080)
+
+        # Runs safely without exceptions
+        worker.execute()
 
 
 if __name__ == "__main__":

@@ -29,41 +29,17 @@ WORKER_METADATA: dict[str, dict[str, Any]] = {
             {"label": "Every 8 hours", "minutes": 480},
         ],
     },
-    "auto_backup": {
-        "title": "Database Hot Backup",
-        "category": "Safety & Recovery",
-        "description": "Periodically takes an atomic snapshot of your SQLite database into data/backups/jobhq_latest.db.",
-        "default_interval_minutes": 10080,  # 7 days
-        "unit": "days",
+    "interview_lifecycle": {
+        "title": "Interview Status Transition",
+        "category": "Pipeline Hygiene",
+        "description": "Automatically marks past scheduled interviews as completed once meeting duration has elapsed.",
+        "default_interval_minutes": 60,  # 1 hour
+        "unit": "hours",
         "interval_options": [
-            {"label": "Every 1 day", "minutes": 1440},
-            {"label": "Every 3 days", "minutes": 4320},
-            {"label": "Every 7 days", "minutes": 10080},
-            {"label": "Every 14 days", "minutes": 20160},
-            {"label": "Every 30 days", "minutes": 43200},
-        ],
-    },
-    "alert_cleanup": {
-        "title": "Job Digest Auto-Pruning",
-        "category": "Data Hygiene",
-        "description": "Deletes noisy unreviewed and dismissed job alert digest items older than your retention limit. Preserves all applied jobs.",
-        "default_interval_minutes": 7200,  # 5 days
-        "default_threshold_days": 5,
-        "threshold_label": "Prune alerts older than",
-        "threshold_options": [
-            {"label": "3 days", "value": 3},
-            {"label": "5 days", "value": 5},
-            {"label": "7 days", "value": 7},
-            {"label": "14 days", "value": 14},
-            {"label": "30 days", "value": 30},
-        ],
-        "unit": "days",
-        "interval_options": [
-            {"label": "Every 1 day", "minutes": 1440},
-            {"label": "Every 3 days", "minutes": 4320},
-            {"label": "Every 5 days", "minutes": 7200},
-            {"label": "Every 7 days", "minutes": 10080},
-            {"label": "Every 14 days", "minutes": 20160},
+            {"label": "Every 30 minutes", "minutes": 30},
+            {"label": "Every 1 hour", "minutes": 60},
+            {"label": "Every 2 hours", "minutes": 120},
+            {"label": "Every 4 hours", "minutes": 240},
         ],
     },
     "auto_ghost": {
@@ -89,17 +65,79 @@ WORKER_METADATA: dict[str, dict[str, Any]] = {
             {"label": "Every 48 hours", "minutes": 2880},
         ],
     },
-    "interview_lifecycle": {
-        "title": "Interview Status Transition",
-        "category": "Pipeline Hygiene",
-        "description": "Automatically marks past scheduled interviews as completed once meeting duration has elapsed.",
-        "default_interval_minutes": 60,  # 1 hour
-        "unit": "hours",
+    "alert_cleanup": {
+        "title": "Job Digest Auto-Pruning",
+        "category": "Data Hygiene",
+        "description": "Deletes noisy unreviewed and dismissed job alert digest items older than your retention limit. Preserves all applied jobs.",
+        "default_interval_minutes": 7200,  # 5 days
+        "default_threshold_days": 5,
+        "threshold_label": "Prune alerts older than",
+        "threshold_options": [
+            {"label": "3 days", "value": 3},
+            {"label": "5 days", "value": 5},
+            {"label": "7 days", "value": 7},
+            {"label": "14 days", "value": 14},
+            {"label": "30 days", "value": 30},
+        ],
+        "unit": "days",
         "interval_options": [
-            {"label": "Every 30 minutes", "minutes": 30},
-            {"label": "Every 1 hour", "minutes": 60},
-            {"label": "Every 2 hours", "minutes": 120},
-            {"label": "Every 4 hours", "minutes": 240},
+            {"label": "Every 1 day", "minutes": 1440},
+            {"label": "Every 3 days", "minutes": 4320},
+            {"label": "Every 5 days", "minutes": 7200},
+            {"label": "Every 7 days", "minutes": 10080},
+            {"label": "Every 14 days", "minutes": 20160},
+        ],
+    },
+    "email_audit_prune": {
+        "title": "Processed Email Audit Pruning",
+        "category": "Data Hygiene",
+        "description": "Prunes raw subjects and sender strings from old processed email logs while keeping message hashes for permanent deduplication.",
+        "default_interval_minutes": 10080,  # 7 days
+        "default_threshold_days": 7,
+        "threshold_label": "Prune logs older than",
+        "threshold_options": [
+            {"label": "3 days", "value": 3},
+            {"label": "7 days", "value": 7},
+            {"label": "14 days", "value": 14},
+            {"label": "30 days", "value": 30},
+            {"label": "60 days", "value": 60},
+            {"label": "90 days", "value": 90},
+        ],
+        "unit": "days",
+        "interval_options": [
+            {"label": "Every 1 day", "minutes": 1440},
+            {"label": "Every 3 days", "minutes": 4320},
+            {"label": "Every 7 days", "minutes": 10080},
+            {"label": "Every 14 days", "minutes": 20160},
+            {"label": "Every 30 days", "minutes": 43200},
+        ],
+    },
+    "auto_backup": {
+        "title": "Database Hot Backup",
+        "category": "Safety & Recovery",
+        "description": "Periodically takes an atomic snapshot of your SQLite database into data/backups/jobhq_latest.db.",
+        "default_interval_minutes": 10080,  # 7 days
+        "unit": "days",
+        "interval_options": [
+            {"label": "Every 1 day", "minutes": 1440},
+            {"label": "Every 3 days", "minutes": 4320},
+            {"label": "Every 7 days", "minutes": 10080},
+            {"label": "Every 14 days", "minutes": 20160},
+            {"label": "Every 30 days", "minutes": 43200},
+        ],
+    },
+    "db_maintenance": {
+        "title": "Database WAL Checkpoint & Optimization",
+        "category": "Safety & Recovery",
+        "description": "Flushes SQLite write-ahead log files back into disk via PRAGMA wal_checkpoint(TRUNCATE) and updates query planner statistics.",
+        "default_interval_minutes": 10080,  # 7 days
+        "unit": "days",
+        "interval_options": [
+            {"label": "Every 1 day", "minutes": 1440},
+            {"label": "Every 3 days", "minutes": 4320},
+            {"label": "Every 7 days", "minutes": 10080},
+            {"label": "Every 14 days", "minutes": 20160},
+            {"label": "Every 30 days", "minutes": 43200},
         ],
     },
 }

@@ -97,3 +97,23 @@ class ProcessedEmailRepository:
             self.session.delete(row)
         self.session.flush()
         return len(rows)
+
+    def prune_older_than(self, cutoff_date: str) -> int:
+        """Prunes raw metadata (subject, sender) from processed emails older than cutoff_date.
+
+        Preserves message_id, category, and timestamps so deduplication is never broken.
+        """
+        rows = list(
+            self.session.scalars(
+                select(ProcessedEmail).where(
+                    ProcessedEmail.processed_at < cutoff_date,
+                    or_(ProcessedEmail.subject != "", ProcessedEmail.sender != ""),
+                )
+            )
+        )
+        for row in rows:
+            row.subject = ""
+            row.sender = ""
+        if rows:
+            self.session.flush()
+        return len(rows)

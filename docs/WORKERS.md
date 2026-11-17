@@ -113,6 +113,16 @@ The daemon orchestrator:
 - Runs on a configurable interval (default: 5 days) with a configurable retention threshold (`threshold_days`, default: 5 days).
 - Hard-deletes noisy unreviewed and dismissed job alerts older than the threshold, preserving applied applications.
 
+### `DbMaintenanceWorker` ([db_maintenance.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/db_maintenance.py))
+- Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.
+- Runs on a configurable interval (default: 7 days).
+- Executes `PRAGMA wal_checkpoint(TRUNCATE)` to flush WAL logs back into the database file and runs `PRAGMA optimize` to update SQLite query planner statistics.
+
+### `EmailAuditPruneWorker` ([email_audit_prune.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/email_audit_prune.py))
+- Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.
+- Runs on a configurable interval (default: 7 days) with a configurable retention threshold (`threshold_days`, default: 7 days).
+- Prunes raw subjects and sender strings from processed email audit logs older than the threshold while keeping message hashes so deduplication is 100% maintained.
+
 ### `AutoGhostWorker` ([auto_ghost.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_ghost.py))
 - Injects `DatabaseManager` and delegates to `JobHQLifecycleService`.
 - Runs daily (`default_interval_minutes = 1440` / 24 hours) with a configurable inactivity threshold (`threshold_days`, default: 10 days).
