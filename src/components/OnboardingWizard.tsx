@@ -326,7 +326,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <div className="space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="text-xs text-slate-600 max-w-lg">
-                  Before reading any email, Job Tracker searches headers on your mail server using these keywords. Review or customize them now, or change them later in Settings.
+                  Before reading any email, JobHQ searches headers on your mail server using these keywords. Review or customize them now, or change them later in Settings.
                 </p>
                 <button
                   type="button"

@@ -4,6 +4,7 @@ import {
   Briefcase,
   Calendar,
   CalendarDays,
+  ChevronDown,
   Columns3,
   Inbox,
   LayoutDashboard,
@@ -18,6 +19,7 @@ import {
   Sun,
 } from 'lucide-react';
 import { describeCron, formatLocalDateTime, formatLocalDateTimeTooltip } from '../utils/appHelpers';
+import { LookbackDropdown } from './LookbackDropdown';
 import type { ImapStatus } from '../types';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -70,41 +72,61 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 }) => {
   return (
     <aside
-      aria-hidden={!sidebarOpen}
-      className={`shrink-0 bg-[#fcfbf9] dark:bg-[#111622] overflow-hidden transition-[width,opacity] duration-200 ease-in-out ${
-        sidebarOpen
-          ? 'w-60 border-r border-[#e5e3dc] dark:border-slate-800/90 opacity-100'
-          : 'w-0 border-r-0 opacity-0 pointer-events-none'
+      className={`sticky top-0 h-screen max-h-screen overflow-hidden shrink-0 bg-[#fcfbf9] dark:bg-[#111622] border-r border-[#e5e3dc] dark:border-slate-800/90 transition-[width] duration-200 ease-in-out z-30 flex flex-col justify-between ${
+        sidebarOpen ? 'w-60' : 'w-16'
       }`}
     >
-      <div className="w-60 h-full min-h-screen flex flex-col justify-between">
-        <div>
-          <div className="h-14 pl-4 pr-3 flex items-center justify-between border-b border-[#e5e3dc] dark:border-slate-800/80">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-[#234aff] flex items-center justify-center text-white shadow-xs font-display font-bold text-sm tracking-tight">
-                JT
-              </div>
-              <div className="flex flex-col">
-                <span className="font-display text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-none">
-                  Job Tracker
-                </span>
-                <span className="text-[10px] text-stone-400 dark:text-slate-500 font-mono tracking-tight mt-0.5">
-                  v2.0 · personal
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onToggleSidebar}
-              title="Close sidebar"
-              aria-label="Close sidebar"
-              aria-expanded={sidebarOpen}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-[#eeece6] dark:hover:bg-slate-800/60 transition-colors"
-            >
-              <PanelLeftClose className="w-4 h-4" />
-            </button>
+      {/* Top Header / Logo */}
+      {sidebarOpen ? (
+        <div className="h-14 px-4 flex items-center justify-between border-b border-[#e5e3dc] dark:border-slate-800/80 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img
+              src="/img/Logo Icon Light No BG.png"
+              alt="JobHQ Logo"
+              className="w-7 h-7 object-contain shrink-0"
+            />
+            <img
+              src="/img/Logo Text Light No BG.png"
+              alt="JobHQ"
+              className="h-6.5 w-auto object-contain shrink-0"
+            />
           </div>
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            title="Collapse sidebar"
+            aria-label="Collapse sidebar"
+            aria-expanded={true}
+            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-[#eeece6] dark:hover:bg-slate-800/60 transition-colors shrink-0 cursor-pointer"
+          >
+            <PanelLeftClose className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="h-14 flex items-center justify-center border-b border-[#e5e3dc] dark:border-slate-800/80 shrink-0">
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            title="Expand sidebar"
+            aria-label="Expand sidebar"
+            aria-expanded={false}
+            className="relative w-10 h-10 rounded-xl flex items-center justify-center hover:bg-[#eeece6]/80 dark:hover:bg-slate-800/60 transition-colors group cursor-pointer"
+          >
+            <img
+              src="/img/Logo Icon Light No BG.png"
+              alt="JobHQ"
+              className="w-7 h-7 object-contain transition-opacity duration-150 group-hover:opacity-0"
+            />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-[#234aff]">
+              <PanelLeftOpen className="w-5 h-5" />
+            </div>
+          </button>
+        </div>
+      )}
 
+      {/* Navigation Links */}
+      <div className="overflow-y-auto min-h-0 flex-1">
+        {sidebarOpen ? (
           <nav className="p-3 space-y-1">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
@@ -121,7 +143,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   }`}
                 >
                   <span className="flex items-center gap-2.5">
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#234aff] dark:text-blue-400' : 'text-stone-400 dark:text-slate-500'}`} />
+                    <Icon
+                      className={`w-4 h-4 shrink-0 ${
+                        isActive
+                          ? 'text-[#234aff] dark:text-blue-400'
+                          : 'text-stone-400 dark:text-slate-500'
+                      }`}
+                    />
                     <span>{item.label}</span>
                   </span>
                   {item.id === 'alerts' && relevantAlertsCount > 0 && (
@@ -138,82 +166,87 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               );
             })}
           </nav>
-        </div>
+        ) : (
+          <nav className="p-2 space-y-1.5 flex flex-col items-center">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onSelectTab(item.id)}
+                  title={item.label}
+                  aria-label={item.label}
+                  className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                    isActive
+                      ? 'bg-[#234aff] text-white shadow-xs'
+                      : 'text-stone-500 dark:text-slate-400 hover:bg-[#eeece6] dark:hover:bg-slate-800/60 hover:text-stone-900 dark:hover:text-slate-100'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {item.id === 'alerts' && relevantAlertsCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#234aff] ring-2 ring-[#fcfbf9] dark:ring-[#111622]" />
+                  )}
+                  {item.id === 'interviews' && upcomingInterviewsCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#fcfbf9] dark:ring-[#111622]" />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </div>
 
-        <div className="p-3 border-t border-[#e5e3dc] dark:border-slate-800/80 space-y-3">
-          {/* Theme switcher */}
-          <div className="flex items-center justify-between bg-[#eeece6]/80 dark:bg-slate-900/80 rounded-lg p-1 border border-[#e5e3dc] dark:border-slate-800/80">
-            <button
-              type="button"
-              onClick={() => onSelectTheme?.('light')}
-              title="Light theme"
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                theme === 'light'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Sun className="w-3.5 h-3.5" />
-              <span>Light</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onSelectTheme?.('dark')}
-              title="Dark theme"
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                theme === 'dark'
-                  ? 'bg-[#1c2436] text-white shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Moon className="w-3.5 h-3.5" />
-              <span>Dark</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onSelectTheme?.('system')}
-              title="Follow system theme"
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                theme === 'system'
-                  ? 'bg-white dark:bg-[#1c2436] text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Monitor className="w-3.5 h-3.5" />
-              <span>Auto</span>
-            </button>
+      {/* Bottom Section */}
+      {sidebarOpen ? (
+        <div className="p-3 border-t border-[#e5e3dc] dark:border-slate-800/80 space-y-2.5 shrink-0">
+          <div className="flex items-center px-1">
+            <span className="inline-flex items-center gap-2 text-[11px] font-bold text-stone-700 dark:text-slate-300">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#234aff] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#234aff]" />
+              </span>
+              JobHQ Active
+            </span>
           </div>
 
           {imap?.connected ? (
-            <div className="p-2.5 rounded-lg bg-[#f6f5f2] dark:bg-slate-900/50 border border-[#e5e3dc] dark:border-slate-800/80 space-y-1.5">
+            <div className="studio-card p-3 rounded-xl space-y-2 border border-[#e5e3dc] dark:border-slate-800">
               <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs" />
-                  <span className="font-semibold text-slate-800 dark:text-slate-200 capitalize">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
+                  <span className="font-semibold text-stone-900 dark:text-slate-100 capitalize truncate text-xs">
                     {imap.provider === 'custom' ? 'Email' : imap.provider}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={onOpenImapModal}
-                  className="text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                  className="text-[11px] font-semibold text-[#234aff] hover:underline shrink-0"
                 >
                   Configure
                 </button>
               </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+              <div
+                title={imap.email}
+                className="text-[11px] font-mono-tabular text-stone-500 dark:text-slate-400 truncate max-w-full"
+              >
                 {imap.email}
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                Connect your inbox to automatically track job replies & calendar invites.
+            <div className="studio-card p-3 rounded-xl space-y-2 border border-[#e5e3dc] dark:border-slate-800">
+              <p className="text-[11px] text-stone-500 dark:text-slate-400 leading-snug">
+                Connect your inbox to track applications &amp; interviews.
               </p>
               <button
                 type="button"
                 onClick={onOpenImapModal}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-[#234aff] hover:bg-[#1938d8] rounded-lg shadow-xs transition-colors"
+                className="btn-cobalt w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg shadow-xs"
               >
                 <Mail className="w-3.5 h-3.5" />
                 Connect Email
@@ -221,7 +254,24 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             </div>
           )}
         </div>
-      </div>
+      ) : (
+        <div className="p-2 border-t border-[#e5e3dc] dark:border-slate-800/80 flex flex-col items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onOpenImapModal}
+            title={imap?.connected ? `Connected: ${imap.email}` : 'Connect Email'}
+            aria-label="Email settings"
+            className="relative w-10 h-10 rounded-xl flex items-center justify-center text-stone-500 dark:text-slate-400 hover:bg-[#eeece6] dark:hover:bg-slate-800/60 hover:text-stone-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
+          >
+            <Mail className="w-4 h-4" />
+            {imap?.connected ? (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#fcfbf9] dark:ring-[#111622]" />
+            ) : (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-[#fcfbf9] dark:ring-[#111622]" />
+            )}
+          </button>
+        </div>
+      )}
     </aside>
   );
 };
@@ -262,20 +312,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   return (
     <header className="h-14 px-6 bg-[#fcfbf9] dark:bg-[#111622] border-b border-[#e5e3dc] dark:border-slate-800/90 flex items-center justify-between gap-6 transition-colors">
       <div className="flex items-center gap-3 min-w-0">
-        {!sidebarOpen && (
-          <button
-            type="button"
-            onClick={onToggleSidebar}
-            title="Open sidebar"
-            aria-label="Open sidebar"
-            aria-expanded={false}
-            className="p-1.5 -ml-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-[#eeece6] dark:hover:bg-slate-800 transition-colors shrink-0"
-          >
-            <PanelLeftOpen className="w-4 h-4" />
-          </button>
-        )}
         <div className="flex items-baseline gap-3 min-w-0">
-          <h1 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100 tracking-tight whitespace-nowrap shrink-0">
+          <h1 className="font-display text-base font-semibold text-stone-900 dark:text-slate-100 tracking-tight whitespace-nowrap shrink-0">
             {activeNavTitle}
           </h1>
           {lastSyncAt && (
@@ -302,18 +340,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2.5 shrink-0">
-        <select
-          aria-label="Email time range"
-          title="How far back to check emails"
+        <LookbackDropdown
           value={syncDays}
-          onChange={(e) => onChangeSyncDays(Number(e.target.value))}
-          className="px-2.5 py-1.5 text-xs bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700/80 rounded-lg text-slate-700 dark:text-slate-300 focus:border-[#234aff] focus:outline-none shadow-2xs"
-        >
-          <option value={1}>Last 1 day</option>
-          <option value={3}>Last 3 days</option>
-          <option value={7}>Last 7 days</option>
-          <option value={30}>Last 30 days</option>
-        </select>
+          disabled={syncing}
+          onChange={onChangeSyncDays}
+        />
 
         <button
           type="button"

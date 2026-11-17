@@ -50,7 +50,7 @@ const APP_PASSWORD_STEPS: Record<ImapProvider, { title: string; steps: string[] 
       'Open your Google Account settings and go to Security.',
       'Turn on 2-Step Verification (Google requires this first).',
       'Search for "App passwords" at the top of the Security page.',
-      'Type "Job Tracker", click Create, and paste the 16-letter code below.',
+      'Type "JobHQ", click Create, and paste the 16-letter code below.',
     ],
   },
   outlook: {
@@ -68,7 +68,7 @@ const APP_PASSWORD_STEPS: Record<ImapProvider, { title: string; steps: string[] 
       'Sign in to Yahoo Mail, click your profile icon, and open Account Info.',
       'Go to Account security in the left menu.',
       'Click Generate app password (or Manage app passwords).',
-      'Enter "Job Tracker", click Generate, and paste the code below.',
+      'Enter "JobHQ", click Generate, and paste the code below.',
     ],
   },
   custom: {
@@ -216,10 +216,10 @@ export const ImapConnectionForm: React.FC<ImapFormFieldsProps> = ({
                 key={key}
                 type="button"
                 onClick={() => handleSelectProvider(key)}
-                className={`px-3 py-2 text-xs font-semibold rounded-lg border text-center transition-all whitespace-nowrap shadow-2xs ${
+                className={`px-2 sm:px-2.5 py-2 text-xs rounded-lg border text-center transition-all shadow-2xs flex items-center justify-center min-h-[38px] leading-tight cursor-pointer ${
                   active
-                    ? 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-600 dark:border-blue-500 text-blue-700 dark:text-blue-300'
-                    : 'bg-white dark:bg-[#182030] border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    ? 'bg-[#234aff]/10 dark:bg-blue-950/40 border-[#234aff] dark:border-blue-500 text-[#234aff] dark:text-blue-300 font-semibold'
+                    : 'bg-white dark:bg-[#182030] border-[#e5e3dc] dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-[#f6f5f2] dark:hover:bg-slate-800 font-medium'
                 }`}
               >
                 {item.label}
@@ -397,7 +397,7 @@ export const ImapConnectionForm: React.FC<ImapFormFieldsProps> = ({
         <button
           type="submit"
           disabled={testing}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-60 whitespace-nowrap"
+          className="btn-cobalt inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg shadow-sm disabled:opacity-60 whitespace-nowrap cursor-pointer transition-colors"
         >
           <Mail className="w-3.5 h-3.5" />
           {testing ? 'Checking connection...' : submitLabel}
@@ -426,8 +426,8 @@ export const ImapModal: React.FC<ImapModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white dark:bg-[#131926] my-8 shadow-xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800/80">
+      <div className="w-full max-w-xl rounded-2xl border border-[#e5e3dc] dark:border-slate-800/90 bg-white dark:bg-[#131926] my-8 shadow-xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e3dc] dark:border-slate-800/80 bg-[#faf9f6] dark:bg-[#182030]/60">
           <div>
             <h3 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">Connect Email</h3>
             <p className="text-xs text-slate-400 dark:text-slate-500">
@@ -437,7 +437,7 @@ export const ImapModal: React.FC<ImapModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-4 h-4" />

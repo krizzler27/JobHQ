@@ -101,7 +101,7 @@ export const api = {
   disconnectImap: () =>
     request<{ status: ImapStatus }>('/api/imap/disconnect', { method: 'DELETE' }),
 
-  syncImap: (days = 30, force_rescan = false) =>
+  syncImap: (days = 1, force_rescan = false) =>
     request<SyncJobStatus>('/api/imap/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

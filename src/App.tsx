@@ -62,6 +62,70 @@ const STAGE_TONE: Record<ApplicationStatus, string> = {
   ghosted: 'text-[#78716c]',
 };
 
+const calculateSyncProgress = (syncJob: SyncJobStatus) => {
+  if (syncJob.phase === 'connecting') {
+    return {
+      pct: 8,
+      isIndeterminate: true,
+      stageLabel: 'Connecting',
+      stepText: 'Connecting to mail server...',
+    };
+  }
+  if (syncJob.phase === 'checking_headers') {
+    return {
+      pct: 18,
+      isIndeterminate: true,
+      stageLabel: 'Stage 1/2 · Scanning',
+      stepText:
+        syncJob.total_headers > 0
+          ? `Scanning ${syncJob.total_headers} email headers for job keywords...`
+          : 'Scanning email headers for job keywords...',
+    };
+  }
+  if (syncJob.phase === 'downloading') {
+    const ratio = syncJob.total > 0 ? syncJob.current / syncJob.total : 0;
+    const pct = Math.min(48, Math.max(18, Math.round(18 + ratio * 30)));
+    return {
+      pct,
+      isIndeterminate: false,
+      stageLabel: 'Stage 1/2 · Downloading',
+      stepText: `Downloading matching emails (${syncJob.current} of ${syncJob.total})`,
+    };
+  }
+  if (syncJob.phase === 'reading') {
+    const ratio = syncJob.total > 0 ? syncJob.current / syncJob.total : 0;
+    const pct = Math.min(96, Math.max(50, Math.round(50 + ratio * 46)));
+    return {
+      pct,
+      isIndeterminate: false,
+      stageLabel: 'Stage 2/2 · Ingesting',
+      stepText: `Parsing & categorizing applications (${syncJob.current} of ${syncJob.total})`,
+    };
+  }
+  if (syncJob.phase === 'unloading') {
+    return {
+      pct: 98,
+      isIndeterminate: false,
+      stageLabel: 'Finalizing',
+      stepText: 'Saving updates & finalizing sync...',
+    };
+  }
+  if (syncJob.phase === 'cancelling') {
+    return {
+      pct: 100,
+      isIndeterminate: false,
+      stageLabel: 'Stopping',
+      stepText: 'Stopping sync safely...',
+    };
+  }
+  return {
+    pct: 0,
+    isIndeterminate: false,
+    stageLabel: 'Syncing',
+    stepText: 'Syncing inbox...',
+  };
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
   const [appViewMode, setAppViewMode] = useState<'kanban' | 'table'>('kanban');
@@ -120,7 +184,7 @@ export default function App() {
   const [syncJob, setSyncJob] = useState<SyncJobStatus | null>(null);
   const [scanRefreshKey, setScanRefreshKey] = useState(0);
   const [statsRefreshKey, setStatsRefreshKey] = useState(0);
-  const [syncDays, setSyncDays] = useState(30);
+  const [syncDays, setSyncDays] = useState(1);
   const [banner, setBanner] = useState<{ type: 'info' | 'error'; text: string } | null>(null);
 
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
@@ -757,75 +821,75 @@ export default function App() {
         />
 
         <main className="flex-1 p-6 space-y-6 max-w-[1440px] w-full mx-auto">
-          {syncing && syncJob && (
-            <div className="rounded-lg border border-blue-200 bg-white p-4 space-y-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <RefreshCw className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
-                  <span className="text-xs font-semibold text-slate-900">
-                    {syncJob.phase === 'connecting' && 'Connecting to your email server...'}
-                    {syncJob.phase === 'checking_headers' &&
-                      'Checking email headers for job keywords...'}
-                    {syncJob.phase === 'downloading' &&
-                      `Downloading matching job emails (${syncJob.current}/${syncJob.total})...`}
-                    {syncJob.phase === 'reading' &&
-                      `Reading matching emails (${syncJob.current}/${syncJob.total})...`}
-                    {syncJob.phase === 'unloading' &&
-                      'Unloading Local AI model from memory...'}
-                    {syncJob.phase === 'cancelling' && 'Stopping sync safely...'}
+          {syncing && syncJob && (() => {
+            const progress = calculateSyncProgress(syncJob);
+            return (
+              <div className="studio-card rounded-2xl p-4.5 space-y-3 shadow-xs border-l-4 border-l-[#234aff]">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-[#234aff]/10 flex items-center justify-center text-[#234aff] shrink-0">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-stone-900 dark:text-slate-100">
+                          {progress.stepText}
+                        </span>
+                        {!progress.isIndeterminate && (
+                          <span className="text-[11px] font-mono-tabular font-bold text-[#234aff] bg-[#234aff]/10 px-2 py-0.5 rounded-md">
+                            {progress.pct}%
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-stone-500 dark:text-slate-400 truncate max-w-xl">
+                        {syncJob.current_subject
+                          ? `Subject: ${syncJob.current_subject}`
+                          : syncJob.phase === 'checking_headers'
+                          ? 'Checking subject lines & senders against your keywords...'
+                          : 'Processing emails...'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    {syncJob.total > 0 && (
+                      <span className="font-mono-tabular text-xs font-semibold text-stone-600 dark:text-slate-300">
+                        {syncJob.current} / {syncJob.total} items
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleCancelSync}
+                      disabled={syncJob.phase === 'cancelling'}
+                      className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-[#f6f5f2] rounded-lg whitespace-nowrap shrink-0 disabled:opacity-50 cursor-pointer shadow-2xs transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      {syncJob.phase === 'cancelling' ? 'Stopping...' : 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="h-2 w-full rounded-full bg-[#eeece6] dark:bg-slate-800 overflow-hidden relative">
+                  <div
+                    className={`h-full bg-[#234aff] rounded-full transition-all duration-300 ${
+                      progress.isIndeterminate ? 'animate-pulse' : ''
+                    }`}
+                    style={{ width: `${progress.pct}%` }}
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-stone-500 dark:text-slate-400 font-mono-tabular">
+                  <span>
+                    {syncJob.total_headers} headers scanned · {syncJob.filtered_out} non-job filtered
+                  </span>
+                  <span>
+                    {syncJob.stats.applications_added + syncJob.stats.applications_updated} jobs updated ·{' '}
+                    {syncJob.stats.interviews_added} interviews · {syncJob.stats.alerts_added} alerts
                   </span>
                 </div>
-
-                <div className="flex items-center gap-3 shrink-0">
-                  {syncJob.total > 0 && (
-                    <span className="font-mono-tabular text-xs font-medium text-slate-700">
-                      {syncJob.current} / {syncJob.total}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleCancelSync}
-                    disabled={syncJob.phase === 'cancelling'}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-700 border border-slate-300 hover:bg-slate-50 rounded whitespace-nowrap shrink-0 disabled:opacity-50"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    {syncJob.phase === 'cancelling' ? 'Stopping...' : 'Cancel'}
-                  </button>
-                </div>
               </div>
-
-              <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className={`h-full bg-blue-600 transition-all duration-300 ${
-                    syncJob.total === 0 ? 'w-1/3 animate-pulse' : ''
-                  }`}
-                  style={
-                    syncJob.total > 0
-                      ? {
-                          width: `${Math.max(
-                            6,
-                            Math.min(100, Math.round((syncJob.current / syncJob.total) * 100)),
-                          )}%`,
-                        }
-                      : undefined
-                  }
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
-                <span className="truncate max-w-xl">
-                  {syncJob.current_subject
-                    ? `Current: ${syncJob.current_subject}`
-                    : 'Filtering recent emails by job keywords...'}
-                </span>
-                <span className="font-mono-tabular whitespace-nowrap">
-                  {syncJob.total_headers} headers · {syncJob.filtered_out} non-job filtered ·{' '}
-                  {syncJob.stats.applications_added + syncJob.stats.applications_updated} updates ·{' '}
-                  {syncJob.stats.interviews_added} interviews · {syncJob.stats.alerts_added} alerts
-                </span>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {banner && (
             <div
@@ -864,6 +928,9 @@ export default function App() {
               overviewStats={overviewStats}
               applications={applications}
               imapConnected={Boolean(imap?.connected)}
+              syncing={syncing}
+              syncDays={syncDays}
+              onChangeSyncDays={setSyncDays}
               overviewPaceMode={overviewPaceMode}
               onChangePaceMode={setOverviewPaceMode}
               onOpenBoard={() => {

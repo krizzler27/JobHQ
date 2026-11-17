@@ -7,7 +7,6 @@ import {
   Columns3,
   ExternalLink,
   Plus,
-  RefreshCw,
   Trophy,
   Video,
   Zap,
@@ -26,6 +25,9 @@ export interface OverviewViewProps {
   overviewStats: StatsSummary | null;
   applications: Application[];
   imapConnected: boolean;
+  syncing?: boolean;
+  syncDays?: number;
+  onChangeSyncDays?: (days: number) => void;
   overviewPaceMode: 'daily' | 'weekly';
   onChangePaceMode: (mode: 'daily' | 'weekly') => void;
   onOpenBoard: () => void;
@@ -42,6 +44,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   overviewStats,
   applications,
   imapConnected,
+  syncing = false,
   overviewPaceMode,
   onChangePaceMode,
   onOpenBoard,
@@ -54,42 +57,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 }) => {
   return (
     <div className="space-y-6">
-      {/* Executive Command Banner */}
-      <div className="studio-card rounded-2xl px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-[#234aff] shadow-xs">
-        <div className="flex items-center gap-3.5">
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#234aff]/10 text-[#234aff] text-xs font-bold border border-[#234aff]/20">
-            <span className="w-2 h-2 rounded-full bg-[#234aff]" />
-            Search Active
-          </div>
-          <span className="text-xs font-medium text-[#58554d]">
-            <strong className="text-[#12141d] font-bold">{applications.length}</strong> active applications
-            {' · '}
-            <strong className="text-[#12141d] font-bold">{dashboard?.kpis.upcoming_interviews ?? 0}</strong> interviews scheduled
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          {imapConnected && (
-            <button
-              type="button"
-              onClick={onSyncInbox}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-[#12141d] bg-white border border-[#e5e3dc] hover:bg-[#f6f5f2] rounded-xl shadow-2xs transition-colors"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Sync Inbox
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onOpenAddApp}
-            className="btn-cobalt inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-xl"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Track Application
-          </button>
-        </div>
-      </div>
-
       {/* 4 Disciplined KPI Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Active Applications */}
@@ -99,7 +66,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-[#58554d]">
-              Active Pipeline
+              Active Applications
             </span>
             <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#eeece6] border border-[#e5e3dc] text-[#12141d] group-hover:text-[#234aff] group-hover:border-[#234aff]/40 transition-colors">
               <Briefcase className="w-4 h-4" />
@@ -110,11 +77,11 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               {dashboard?.kpis.active_applications ?? 0}
             </div>
             <span className="text-[11px] font-mono-tabular text-[#58554d] bg-[#eeece6] px-2 py-0.5 rounded-md border border-[#e5e3dc] font-semibold">
-              &lt; 10 days
+              of {applications.length} total
             </span>
           </div>
-          <div className="mt-2.5 text-xs text-[#58554d] flex items-center gap-1 group-hover:text-[#234aff] transition-colors font-medium">
-            <span>View all active</span>
+          <div className="mt-2.5 text-xs text-[#58554d] flex items-center justify-between group-hover:text-[#234aff] transition-colors font-medium">
+            <span>&lt; 10 days or interviewing</span>
             <ArrowUpRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </div>
         </div>
@@ -208,9 +175,9 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
       <section className="space-y-3.5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold tracking-tight text-[#12141d] font-display">Application Pipeline</h2>
+            <h2 className="text-base font-bold tracking-tight text-[#12141d] font-display">Applications & Activity</h2>
             <p className="text-xs text-[#58554d]">
-              Funnel progression and application velocity over time.
+              Breakdown by stage and your daily pace.
             </p>
           </div>
           <button
