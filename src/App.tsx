@@ -40,6 +40,7 @@ import { OverviewView } from './components/OverviewView';
 import { ProfileSettingsView } from './components/ProfileSettingsView';
 import { ScanLogView } from './components/ScanLogView';
 import { StatsView } from './components/StatsView';
+import { useToast } from './context/ToastContext';
 import type {
   Application,
   ApplicationStatus,
@@ -187,6 +188,8 @@ export default function App() {
   const [syncDays, setSyncDays] = useState(1);
   const [banner, setBanner] = useState<{ type: 'info' | 'error'; text: string } | null>(null);
 
+  const { toast } = useToast();
+
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [showAddApp, setShowAddApp] = useState(false);
   const [showAddInterview, setShowAddInterview] = useState(false);
@@ -253,6 +256,7 @@ export default function App() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load workspace data.';
       setBanner({ type: 'error', text: message });
+      toast.error('Workspace load failed', message);
     } finally {
       setLoading(false);
     }
@@ -330,26 +334,36 @@ export default function App() {
           if (s.model_unloaded) parts.push('AI model unloaded from RAM');
           if (s.llm_fallback_note) parts.push(s.llm_fallback_note);
           setBanner({ type: 'info', text: parts.join(' · ') });
+          toast.success(
+            'Inbox sync completed',
+            `${s.applications_added + s.applications_updated} jobs updated · ${s.interviews_added} interviews · ${s.alerts_added} alerts`,
+          );
         } else if (next.status === 'cancelled') {
           const extra =
             s.processed_new > 0 ? ` Saved ${s.processed_new} scanned email(s) before stopping.` : '';
+          const msg = `${next.error || 'Sync cancelled.'}${extra}${s.model_unloaded ? ' · AI model unloaded from RAM' : ''}`;
           setBanner({
             type: 'info',
-            text: `${next.error || 'Sync cancelled.'}${extra}${s.model_unloaded ? ' · AI model unloaded from RAM' : ''}`,
+            text: msg,
           });
+          toast.info('Sync cancelled', msg);
         } else if (next.status === 'error') {
+          const errMsg = next.error || 'Email sync failed. Check terminal logs for details.';
           setBanner({
             type: 'error',
-            text: next.error || 'Email sync failed. Check terminal logs for details.',
+            text: errMsg,
           });
+          toast.error('Sync failed', errMsg);
         }
       } catch (err) {
         clearInterval(timer);
         setSyncJob(null);
+        const errMsg = err instanceof Error ? err.message : 'Lost connection while checking sync status.';
         setBanner({
           type: 'error',
-          text: err instanceof Error ? err.message : 'Lost connection while checking sync status.',
+          text: errMsg,
         });
+        toast.error('Sync connection lost', errMsg);
       }
     }, 650);
     return () => clearInterval(timer);
@@ -381,9 +395,11 @@ export default function App() {
     try {
       const started = await api.syncImap(syncDays, forceRescan);
       setSyncJob(started);
+      toast.info('Sync started', `Scanning emails from the past ${syncDays} day${syncDays === 1 ? '' : 's'}...`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not start inbox sync.';
       setBanner({ type: 'error', text: message });
+      toast.error('Sync failed to start', message);
     }
   };
 
@@ -423,19 +439,23 @@ export default function App() {
   const handleBulkMoveApps = async (ids: number[], status: ApplicationStatus) => {
     const res = await api.bulkApplications({ ids, action: 'move_stage', status });
     await loadAllData();
+    const msg = `Moved ${res.updated} application${res.updated === 1 ? '' : 's'} to ${status}.`;
     setBanner({
       type: 'info',
-      text: `Moved ${res.updated} application${res.updated === 1 ? '' : 's'} to ${status}.`,
+      text: msg,
     });
+    toast.success('Applications updated', msg);
   };
 
   const handleBulkDeleteApps = async (ids: number[]) => {
     const res = await api.bulkApplications({ ids, action: 'delete' });
     await loadAllData();
+    const msg = `Deleted ${res.deleted} application${res.deleted === 1 ? '' : 's'}.`;
     setBanner({
       type: 'info',
-      text: `Deleted ${res.deleted} application${res.deleted === 1 ? '' : 's'}.`,
+      text: msg,
     });
+    toast.info('Applications deleted', msg);
   };
 
   const handleCreateApp = async (payload: Partial<Application>): Promise<boolean> => {
@@ -519,10 +539,20 @@ export default function App() {
     const res = await api.updateAlertStatus(id, status);
     await loadAllData();
     if (status === 'applied' && res.created_application) {
+      const msg = `Added "${res.created_application.role_title}" (${res.created_application.source_platform}) to Applied.`;
       setBanner({
         type: 'info',
-        text: `Added "${res.created_application.role_title}" (${res.created_application.source_platform}) to Applied.`,
+        text: msg,
       });
+      toast.success('Applied to Job', msg);
+    } else if (status === 'dismissed') {
+      const targetAlert = alerts.find((a) => a.id === id) || dashboard?.suggested_alerts.find((a) => a.id === id);
+      const title = targetAlert?.job_title ? `"${targetAlert.job_title}"` : 'Job alert';
+      toast.info('Alert dismissed', `${title} moved to Dismissed.`);
+    } else if (status === 'suggested') {
+      const targetAlert = alerts.find((a) => a.id === id);
+      const title = targetAlert?.job_title ? `"${targetAlert.job_title}"` : 'Job alert';
+      toast.info('Alert restored', `${title} restored to Suggested.`);
     }
   };
 
@@ -530,6 +560,7 @@ export default function App() {
     await api.deleteAlert(id);
     await loadAllData();
     setBanner({ type: 'info', text: 'Deleted job alert.' });
+    toast.info('Alert deleted', 'Job alert was removed.');
   };
 
   const handleBulkAlertAction = async (
@@ -539,26 +570,34 @@ export default function App() {
     const res = await api.bulkAlerts({ ids, action });
     await loadAllData();
     if (action === 'apply') {
+      const msg = `Marked ${res.updated} alert${res.updated === 1 ? '' : 's'} applied (${res.created_applications} added to Applied).`;
       setBanner({
         type: 'info',
-        text: `Marked ${res.updated} alert${res.updated === 1 ? '' : 's'} applied (${res.created_applications} added to Applied).`,
+        text: msg,
       });
+      toast.success('Alerts applied', msg);
     } else if (action === 'dismiss') {
+      const msg = `Dismissed ${res.updated} alert${res.updated === 1 ? '' : 's'}.`;
       setBanner({
         type: 'info',
-        text: `Dismissed ${res.updated} alert${res.updated === 1 ? '' : 's'}.`,
+        text: msg,
       });
+      toast.info('Alerts dismissed', msg);
     } else if (action === 'delete') {
       const count = res.deleted ?? 0;
+      const msg = `Deleted ${count} job alert${count === 1 ? '' : 's'}.`;
       setBanner({
         type: 'info',
-        text: `Deleted ${count} job alert${count === 1 ? '' : 's'}.`,
+        text: msg,
       });
+      toast.info('Alerts deleted', msg);
     } else {
+      const msg = `Restored ${res.updated} alert${res.updated === 1 ? '' : 's'} to Suggested.`;
       setBanner({
         type: 'info',
-        text: `Restored ${res.updated} alert${res.updated === 1 ? '' : 's'} to Suggested.`,
+        text: msg,
       });
+      toast.info('Alerts restored', msg);
     }
   };
 
@@ -592,15 +631,19 @@ export default function App() {
     const res = await api.convertAlert(alertId, payload);
     await loadAllData();
     if (res.target === 'interview') {
+      const msg = `Moved "${res.application.role_title}" at ${res.application.company} to Upcoming Interviews.`;
       setBanner({
         type: 'info',
-        text: `Moved "${res.application.role_title}" at ${res.application.company} to Upcoming Interviews.`,
+        text: msg,
       });
+      toast.success('Alert converted', msg);
     } else {
+      const msg = `Moved "${res.application.role_title}" at ${res.application.company} to Applications.`;
       setBanner({
         type: 'info',
-        text: `Moved "${res.application.role_title}" at ${res.application.company} to Applications.`,
+        text: msg,
       });
+      toast.success('Alert converted', msg);
     }
     return true;
   };
@@ -617,10 +660,12 @@ export default function App() {
       setDuplicateGuard(null);
       setShowAddApp(false);
       await loadAllData();
+      const msg = `Updated existing application "${updated.role_title}" at ${updated.company}.`;
       setBanner({
         type: 'info',
-        text: `Updated existing application "${updated.role_title}" at ${updated.company}.`,
+        text: msg,
       });
+      toast.success('Application updated', msg);
     } else if (guard.kind === 'alert_apply') {
       const res = await api.updateAlertStatus(guard.alert.id, 'applied', {
         resolve_duplicate: 'update_existing',
@@ -629,12 +674,14 @@ export default function App() {
       setDuplicateGuard(null);
       await loadAllData();
       const targetApp = res.updated_application || res.created_application;
+      const msg = targetApp
+        ? `Updated existing application "${targetApp.role_title}" at ${targetApp.company} and marked alert applied.`
+        : 'Updated existing application and marked alert applied.';
       setBanner({
         type: 'info',
-        text: targetApp
-          ? `Updated existing application "${targetApp.role_title}" at ${targetApp.company} and marked alert applied.`
-          : 'Updated existing application and marked alert applied.',
+        text: msg,
       });
+      toast.success('Application updated', msg);
     } else if (guard.kind === 'alert_convert') {
       const res = await api.convertAlert(guard.alertId, {
         ...guard.payload,
@@ -644,10 +691,12 @@ export default function App() {
       setDuplicateGuard(null);
       setMoveAlertState(null);
       await loadAllData();
+      const msg = `Updated existing application "${res.application.role_title}" at ${res.application.company}.`;
       setBanner({
         type: 'info',
-        text: `Updated existing application "${res.application.role_title}" at ${res.application.company}.`,
+        text: msg,
       });
+      toast.success('Application updated', msg);
     }
   };
 
@@ -659,10 +708,12 @@ export default function App() {
       setDuplicateGuard(null);
       setShowAddApp(false);
       await loadAllData();
+      const msg = `Added "${created.role_title}" at ${created.company} as a separate application.`;
       setBanner({
         type: 'info',
-        text: `Added "${created.role_title}" at ${created.company} as a separate application.`,
+        text: msg,
       });
+      toast.success('Application added', msg);
     } else if (guard.kind === 'alert_apply') {
       const res = await api.updateAlertStatus(guard.alert.id, 'applied', {
         resolve_duplicate: 'add_anyway',
@@ -670,10 +721,12 @@ export default function App() {
       setDuplicateGuard(null);
       await loadAllData();
       if (res.created_application) {
+        const msg = `Added "${res.created_application.role_title}" (${res.created_application.source_platform}) as a separate application.`;
         setBanner({
           type: 'info',
-          text: `Added "${res.created_application.role_title}" (${res.created_application.source_platform}) as a separate application.`,
+          text: msg,
         });
+        toast.success('Application added', msg);
       }
     } else if (guard.kind === 'alert_convert') {
       const res = await api.convertAlert(guard.alertId, {
@@ -683,10 +736,12 @@ export default function App() {
       setDuplicateGuard(null);
       setMoveAlertState(null);
       await loadAllData();
+      const msg = `Moved "${res.application.role_title}" at ${res.application.company} as a separate application.`;
       setBanner({
         type: 'info',
-        text: `Moved "${res.application.role_title}" at ${res.application.company} as a separate application.`,
+        text: msg,
       });
+      toast.success('Application added', msg);
     }
   };
 
@@ -696,10 +751,12 @@ export default function App() {
       min_score: minScore,
     });
     await loadAllData();
+    const msg = `Dismissed ${res.updated} alert${res.updated === 1 ? '' : 's'} below ${minScore}% match.`;
     setBanner({
       type: 'info',
-      text: `Dismissed ${res.updated} alert${res.updated === 1 ? '' : 's'} below ${minScore}% match.`,
+      text: msg,
     });
+    toast.info('Low-match alerts dismissed', msg);
   };
 
   const handleRescoreAlerts = async () => {
@@ -717,6 +774,7 @@ export default function App() {
     await api.disconnectImap();
     await loadAllData();
     setBanner({ type: 'info', text: 'Disconnected saved IMAP mailbox.' });
+    toast.info('Mailbox disconnected', 'Your saved IMAP mailbox was disconnected.');
   };
 
   const applications = dashboard?.applications || [];
@@ -1348,10 +1406,12 @@ export default function App() {
             summaryParts.push('deleted item');
           }
           if (summaryParts.length > 0) {
+            const msg = `Email scan filters updated: ${summaryParts.join(' · ')}.`;
             setBanner({
               type: 'info',
-              text: `Email scan filters updated: ${summaryParts.join(' · ')}.`,
+              text: msg,
             });
+            toast.info('Scan filters updated', msg);
           }
         }}
       />

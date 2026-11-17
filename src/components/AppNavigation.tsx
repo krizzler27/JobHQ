@@ -200,25 +200,12 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
       {/* Bottom Section */}
       {sidebarOpen ? (
-        <div className="p-3 border-t border-[#e5e3dc] dark:border-slate-800/80 space-y-2.5 shrink-0">
-          <div className="flex items-center px-1">
-            <span className="inline-flex items-center gap-2 text-[11px] font-bold text-stone-700 dark:text-slate-300">
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#234aff] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#234aff]" />
-              </span>
-              JobHQ Active
-            </span>
-          </div>
-
+        <div className="p-3 border-t border-[#e5e3dc] dark:border-slate-800/80 shrink-0">
           {imap?.connected ? (
             <div className="studio-card p-3 rounded-xl space-y-2 border border-[#e5e3dc] dark:border-slate-800">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="relative flex h-2 w-2 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                  </span>
+                  <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20 shrink-0" />
                   <span className="font-semibold text-stone-900 dark:text-slate-100 capitalize truncate text-xs">
                     {imap.provider === 'custom' ? 'Email' : imap.provider}
                   </span>

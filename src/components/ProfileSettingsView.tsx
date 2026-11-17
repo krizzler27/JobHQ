@@ -20,6 +20,7 @@ import type {
   ProfileSettings,
 } from '../types';
 import { describeCron } from '../utils/appHelpers';
+import { useToast } from '../context/ToastContext';
 import { EmailReaderPanel } from './EmailReaderPanel';
 import { BackupRestoreSection } from './BackupRestoreSection';
 
@@ -299,6 +300,8 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
   const [filterNotice, setFilterNotice] = useState('');
   const [saveError, setSaveError] = useState('');
 
+  const { toast } = useToast();
+
   const skipFormSyncRef = useRef(false);
   const filterSaveSeqRef = useRef(0);
   const filterNoticeTimerRef = useRef<number | null>(null);
@@ -345,8 +348,19 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
       });
       setSavedNotice('Settings saved.');
       setTimeout(() => setSavedNotice(''), 3000);
+      const tabDescription =
+        activeTab === 'preferences'
+          ? 'Your career preferences and target criteria are updated.'
+          : activeTab === 'email-sync'
+            ? 'Your email connection and auto-sync schedule are updated.'
+            : activeTab === 'filters-ai'
+              ? 'Your scan filters and AI model settings are updated.'
+              : 'Your settings have been saved successfully.';
+      toast.success('Settings saved', tabDescription);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Could not save settings.');
+      const msg = err instanceof Error ? err.message : 'Could not save settings.';
+      setSaveError(msg);
+      toast.error('Failed to save settings', msg);
     } finally {
       setSaving(false);
     }
@@ -369,6 +383,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
       await onSaveProfile({ [field]: next });
       if (seq === filterSaveSeqRef.current) {
         setFilterNotice('Saved');
+        toast.success('Filters updated', 'Scan filter keywords have been saved.');
         if (filterNoticeTimerRef.current) {
           window.clearTimeout(filterNoticeTimerRef.current);
         }
@@ -401,6 +416,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
         scan_exclude_keywords: reset.scan_exclude_keywords || [],
       });
       setFilterNotice('Reset to defaults');
+      toast.info('Filters reset', 'Scan filters were restored to recommended defaults.');
       if (filterNoticeTimerRef.current) {
         window.clearTimeout(filterNoticeTimerRef.current);
       }

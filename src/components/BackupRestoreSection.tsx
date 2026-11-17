@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { api } from '../api';
 import { formatLocalDateTime } from '../utils/appHelpers';
+import { useToast } from '../context/ToastContext';
 
 export interface BackupRestoreSectionProps {
   onDataRestored: () => Promise<void>;
@@ -35,6 +36,8 @@ export const BackupRestoreSection: React.FC<BackupRestoreSectionProps> = ({
   const [confirmReplace, setConfirmReplace] = useState(false);
   const [restoring, setRestoring] = useState(false);
 
+  const { toast } = useToast();
+
   const handleDownloadJson = async () => {
     setDownloadingJson(true);
     setBackupError('');
@@ -42,8 +45,11 @@ export const BackupRestoreSection: React.FC<BackupRestoreSectionProps> = ({
     try {
       await api.downloadBackupFile('json');
       setBackupNotice('Downloaded portable JSON backup.');
+      toast.success('Backup downloaded', 'Portable JSON backup saved successfully.');
     } catch (err) {
-      setBackupError(err instanceof Error ? err.message : 'Failed to export JSON backup.');
+      const msg = err instanceof Error ? err.message : 'Failed to export JSON backup.';
+      setBackupError(msg);
+      toast.error('Export failed', msg);
     } finally {
       setDownloadingJson(false);
     }
@@ -56,8 +62,11 @@ export const BackupRestoreSection: React.FC<BackupRestoreSectionProps> = ({
     try {
       await api.downloadBackupFile('sqlite');
       setBackupNotice('Downloaded SQLite database snapshot (.db).');
+      toast.success('Snapshot downloaded', 'SQLite database snapshot saved successfully.');
     } catch (err) {
-      setBackupError(err instanceof Error ? err.message : 'Failed to download SQLite database.');
+      const msg = err instanceof Error ? err.message : 'Failed to download SQLite database.';
+      setBackupError(msg);
+      toast.error('Download failed', msg);
     } finally {
       setDownloadingSqlite(false);
     }
@@ -132,13 +141,16 @@ export const BackupRestoreSection: React.FC<BackupRestoreSectionProps> = ({
         parts.push('updated profile goals');
       }
       setBackupNotice(`Restore complete: ${parts.join(' · ')}.`);
+      toast.success('Database restored', parts.join(' · '));
       setPendingBackup(null);
       setConfirmReplace(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     } catch (err) {
-      setBackupError(err instanceof Error ? err.message : 'Backup restore failed.');
+      const msg = err instanceof Error ? err.message : 'Backup restore failed.';
+      setBackupError(msg);
+      toast.error('Restore failed', msg);
     } finally {
       setRestoring(false);
     }
