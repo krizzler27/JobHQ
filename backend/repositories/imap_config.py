@@ -22,26 +22,32 @@ class ImapConfigRepository:
         """Returns (raw_credentials_dict, source='saved'|'none')."""
         saved = self.get_or_create()
         if saved.email and saved.password and saved.host:
-            decrypted_password = SecretCipher.decrypt(saved.password)
-            # Silently upgrade any legacy plaintext password in DB to encrypted storage
-            if not str(saved.password).startswith(ENC_PREFIX) and decrypted_password:
-                saved.password = SecretCipher.encrypt(decrypted_password)
-                self.session.flush()
-            return {
-                "provider": saved.provider,
-                "host": saved.host,
-                "port": saved.port,
-                "email": saved.email,
-                "password": decrypted_password,
-                "folder": saved.folder or "INBOX",
-                "use_ssl": bool(saved.use_ssl),
-            }, "saved"
+            try:
+                decrypted_password = SecretCipher.decrypt(saved.password)
+            except ValueError:
+                # Key rotation, machine migration, or missing key: gracefully treat as unconfigured
+                decrypted_password = ""
+
+            if decrypted_password:
+                # Silently upgrade any legacy plaintext password in DB to encrypted storage
+                if not str(saved.password).startswith(ENC_PREFIX):
+                    saved.password = SecretCipher.encrypt(decrypted_password)
+                    self.session.flush()
+                return {
+                    "provider": saved.provider,
+                    "host": saved.host,
+                    "port": saved.port,
+                    "email": saved.email,
+                    "password": decrypted_password,
+                    "folder": saved.folder or "INBOX",
+                    "use_ssl": bool(saved.use_ssl),
+                }, "saved"
 
         return {
             "provider": saved.provider,
             "host": saved.host,
             "port": saved.port,
-            "email": "",
+            "email": saved.email if saved.email else "",
             "password": "",
             "folder": saved.folder or "INBOX",
             "use_ssl": bool(saved.use_ssl),

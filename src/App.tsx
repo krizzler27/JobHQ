@@ -150,7 +150,7 @@ export default function App() {
     } catch {
       // Ignore storage failures
     }
-    return 'system';
+    return 'light';
   });
 
   useEffect(() => {
