@@ -19,6 +19,8 @@ export interface Application {
   latest_email_subject: string;
   latest_email_snippet: string;
   job_url: string;
+  rejection_reason?: string;
+  rejection_notes?: string;
   created_at: string;
   updated_at: string;
 }
@@ -297,6 +299,14 @@ export interface StatsSummary {
     conversion_rate_pct: number;
     triaged_conversion_pct: number;
     top_sources: AlertSourceStat[];
+  };
+  retro_stats?: {
+    total_lost: number;
+    reasons: Array<{
+      reason: string;
+      count: number;
+      percentage: number;
+    }>;
   };
 }
 

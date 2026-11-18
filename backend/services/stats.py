@@ -261,6 +261,24 @@ class StatsQueryService:
         ]
         top_alert_sources.sort(key=lambda s: (-s["total"], -s["applied"], s["source_app"].lower()))
 
+        # Rejection & Ghosting Retro Breakdown
+        retro_counts: dict[str, int] = {}
+        retro_total = 0
+        for app in filtered_apps:
+            if app.status in ("rejected", "ghosted"):
+                retro_total += 1
+                reason = (app.rejection_reason or "").strip() or "No reason specified"
+                retro_counts[reason] = retro_counts.get(reason, 0) + 1
+
+        retro_breakdown = [
+            {
+                "reason": reason,
+                "count": count,
+                "percentage": round((count / retro_total) * 100, 1) if retro_total else 0.0,
+            }
+            for reason, count in sorted(retro_counts.items(), key=lambda x: (-x[1], x[0]))
+        ]
+
         return {
             "range_days": days if days and days > 0 else None,
             "funnel": {
@@ -308,5 +326,9 @@ class StatsQueryService:
                     round((alert_counts["applied"] / triaged_total) * 100, 1) if triaged_total else 0.0
                 ),
                 "top_sources": top_alert_sources[:8],
+            },
+            "retro_stats": {
+                "total_lost": retro_total,
+                "reasons": retro_breakdown,
             },
         }

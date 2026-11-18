@@ -25,6 +25,8 @@ export const ApplicationDrawer: React.FC<ApplicationDrawerProps> = ({
   const [appliedDate, setAppliedDate] = useState('');
   const [location, setLocation] = useState('');
   const [jobUrl, setJobUrl] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionNotes, setRejectionNotes] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -38,6 +40,8 @@ export const ApplicationDrawer: React.FC<ApplicationDrawerProps> = ({
       setAppliedDate(application.applied_date);
       setLocation(application.location);
       setJobUrl(application.job_url || '');
+      setRejectionReason(application.rejection_reason || '');
+      setRejectionNotes(application.rejection_notes || '');
       setNotes(application.notes);
       setConfirmDelete(false);
     }
@@ -57,6 +61,8 @@ export const ApplicationDrawer: React.FC<ApplicationDrawerProps> = ({
         applied_date: appliedDate,
         location,
         job_url: jobUrl.trim(),
+        rejection_reason: rejectionReason.trim(),
+        rejection_notes: rejectionNotes.trim(),
         notes,
       });
       onClose();
@@ -192,6 +198,53 @@ export const ApplicationDrawer: React.FC<ApplicationDrawerProps> = ({
               className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#182030] px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-blue-600 focus:outline-none shadow-2xs"
             />
           </div>
+
+          {(status === 'rejected' || status === 'ghosted') && (
+            <div className="rounded-xl border border-rose-200/80 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 p-3.5 space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-rose-700 dark:text-rose-400">
+                  {status === 'rejected' ? 'Rejection Post-Mortem' : 'Ghosting Retro Notes'}
+                </span>
+                <span className="text-[10px] text-rose-500/80 uppercase font-semibold tracking-wider">
+                  Outcome Tag
+                </span>
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                  Reason / Pattern
+                </label>
+                <select
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="w-full rounded-lg border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-[#182030] px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-rose-500 focus:outline-none shadow-2xs"
+                >
+                  <option value="">No reason specified</option>
+                  <option value="Ghosted after applied">Ghosted after applied (no reply)</option>
+                  <option value="Ghosted after interview">Ghosted after interview</option>
+                  <option value="Passed on tech round">Passed on tech round / assessment</option>
+                  <option value="Passed on behavioral/culture">Passed on behavioral / culture</option>
+                  <option value="Role cancelled / frozen">Role cancelled / headcount frozen</option>
+                  <option value="Salary mismatch">Compensation / salary mismatch</option>
+                  <option value="Experience gap">Experience level / seniority gap</option>
+                  <option value="Location / sponsorship">Location or visa / sponsorship</option>
+                  <option value="Standard automated template">Generic automated rejection email</option>
+                  <option value="Other">Other / custom feedback</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                  Learnings & Retro Notes
+                </label>
+                <textarea
+                  rows={2}
+                  value={rejectionNotes}
+                  onChange={(e) => setRejectionNotes(e.target.value)}
+                  placeholder="What went wrong? Feedback from interviewer? Areas to practice..."
+                  className="w-full rounded-lg border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-[#182030] px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-rose-500 focus:outline-none shadow-2xs"
+                />
+              </div>
+            </div>
+          )}
 
           {(application.latest_email_subject || application.latest_email_snippet) && (
             <div className="rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-50 dark:bg-[#0e1420]/80 p-3.5 space-y-1.5 shadow-2xs">

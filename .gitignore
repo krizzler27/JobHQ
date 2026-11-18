@@ -15,3 +15,5 @@ __pycache__/
 .aistudio/
 metadata.json
 bun.lock
+promo/
+brag-output*/

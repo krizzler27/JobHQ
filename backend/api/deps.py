@@ -28,10 +28,13 @@ def create_app_context(db_path: str | None = None) -> AppContext:
     )
 
 
-DEFAULT_APP_CONTEXT = create_app_context()
+DEFAULT_APP_CONTEXT: AppContext | None = None
 
 
 def get_app_context() -> AppContext:
+    global DEFAULT_APP_CONTEXT
+    if DEFAULT_APP_CONTEXT is None:
+        DEFAULT_APP_CONTEXT = create_app_context()
     return DEFAULT_APP_CONTEXT
 
 

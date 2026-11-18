@@ -30,7 +30,7 @@ def configure_logging() -> None:
 
 
 def create_app(context: AppContext | None = None) -> FastAPI:
-    app_ctx = context or DEFAULT_APP_CONTEXT
+    app_ctx = context or get_app_context()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):

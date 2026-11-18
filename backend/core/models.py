@@ -40,6 +40,8 @@ class Application(Base, SerializerMixin):
     latest_email_subject: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     latest_email_snippet: Mapped[str] = mapped_column(Text, nullable=False, default="")
     job_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    rejection_reason: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    rejection_notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
     created_at: Mapped[str] = mapped_column(String(32), nullable=False, default=now_iso)
     updated_at: Mapped[str] = mapped_column(String(32), nullable=False, default=now_iso, index=True)
 

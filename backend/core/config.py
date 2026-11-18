@@ -1,3 +1,4 @@
+
 """Centralized, strongly-typed configuration and path management for JobHQ."""
 
 from functools import lru_cache
@@ -61,14 +62,20 @@ class JobHQConfig(BaseSettings):
     def data_dir(self) -> Path:
         """Data directory containing SQLite database (~/.jobhq/data)."""
         d = self.home_dir / "data"
-        d.mkdir(parents=True, exist_ok=True)
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
         return d
 
     @property
     def db_path(self) -> Path:
         """SQLite database path (~/.jobhq/data/job_tracker.db)."""
         if self.custom_db_path:
-            self.custom_db_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                self.custom_db_path.parent.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                pass
             return self.custom_db_path
         return self.data_dir / "job_tracker.db"
 
@@ -76,23 +83,35 @@ class JobHQConfig(BaseSettings):
     def backups_dir(self) -> Path:
         """Backups directory (~/.jobhq/backups)."""
         d = self.custom_backups_dir or (self.home_dir / "backups")
-        d.mkdir(parents=True, exist_ok=True)
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
         return d
 
     @property
     def models_dir(self) -> Path:
         """Directory for downloaded GGUF models (~/.jobhq/models)."""
         d = self.custom_models_dir or (self.home_dir / "models")
-        d.mkdir(parents=True, exist_ok=True)
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
         return d
 
     @property
     def secret_key_path(self) -> Path:
         """Fernet secret key path (~/.jobhq/.secret.key)."""
         if self.custom_secret_key_path:
-            self.custom_secret_key_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                self.custom_secret_key_path.parent.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                pass
             return self.custom_secret_key_path
-        self.home_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.home_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
         return self.home_dir / ".secret.key"
 
 

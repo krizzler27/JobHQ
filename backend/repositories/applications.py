@@ -164,6 +164,8 @@ class ApplicationRepository(BaseRepository[Application]):
             latest_email_subject=str(payload.get("latest_email_subject", "")).strip(),
             latest_email_snippet=str(payload.get("latest_email_snippet", "")).strip(),
             job_url=clean_http_url(payload.get("job_url", "")),
+            rejection_reason=str(payload.get("rejection_reason", "")).strip(),
+            rejection_notes=str(payload.get("rejection_notes", "")).strip(),
             created_at=ts,
             updated_at=ts,
         )
@@ -190,10 +192,12 @@ class ApplicationRepository(BaseRepository[Application]):
             "notes",
             "latest_email_subject",
             "latest_email_snippet",
+            "rejection_reason",
+            "rejection_notes",
         ):
             if field in payload:
                 val = str(payload[field])
-                setattr(app, field, val if field == "notes" else val.strip())
+                setattr(app, field, val if field in ("notes", "rejection_notes") else val.strip())
         if "job_url" in payload:
             app.job_url = clean_http_url(payload["job_url"])
         app.last_update_date = str(payload.get("last_update_date", ts[:10])).strip() or ts[:10]

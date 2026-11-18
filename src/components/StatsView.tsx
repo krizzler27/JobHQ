@@ -522,6 +522,56 @@ export const StatsView: React.FC<StatsViewProps> = ({
               itemLabel="sources"
             />
           </section>
+
+          {/* Rejection & Ghosting Post-Mortem Card */}
+          {stats.retro_stats && stats.retro_stats.total_lost > 0 && (
+            <section className="studio-card p-0 overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-[#e5e3dc] dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-[#eeece6]/20 dark:bg-slate-850/30">
+                <div>
+                  <h3 className="text-xs font-bold tracking-tight text-[#12141d] dark:text-slate-100 uppercase">
+                    Outcome & Rejection Post-Mortem
+                  </h3>
+                  <p className="text-xs text-[#8e8a7f] dark:text-slate-400 mt-0.5">
+                    Patterns and feedback across {stats.retro_stats.total_lost} rejected or ghosted application{stats.retro_stats.total_lost === 1 ? '' : 's'}.
+                  </p>
+                </div>
+                <div className="text-xs font-mono-tabular text-stone-500 dark:text-slate-400">
+                  Total Lost: <strong className="text-rose-600 dark:text-rose-400">{stats.retro_stats.total_lost}</strong>
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {stats.retro_stats.reasons.map((r) => (
+                    <div
+                      key={r.reason}
+                      className="p-3 rounded-xl border border-stone-200/80 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-800/30 flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-stone-900 dark:text-slate-100 truncate">
+                          {r.reason}
+                        </div>
+                        <div className="w-full bg-stone-200 dark:bg-slate-700 h-1.5 rounded-full mt-2 overflow-hidden">
+                          <div
+                            className="bg-rose-500 dark:bg-rose-400 h-full rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min(100, Math.max(4, r.percentage))}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-xs font-bold font-mono-tabular text-stone-900 dark:text-slate-100">
+                          {r.count}
+                        </div>
+                        <div className="text-[10px] font-mono-tabular text-stone-500 dark:text-slate-400">
+                          {r.percentage}%
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
         </>
       )}
     </div>
