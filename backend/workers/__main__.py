@@ -1,20 +1,12 @@
 """Standalone worker process runner (`python -m backend.workers`)."""
 
-import logging
-import sys
-
 from backend.core.database import DatabaseManager
+from backend.core.logging import setup_logging
 from backend.services.sync import ImapSyncService, SyncJobManager
 from backend.workers.core.registry import get_default_workers
 from backend.workers.core.runner import WorkerRunner
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S",
-    stream=sys.stdout,
-    force=True,
-)
+logger = setup_logging("jobhq.workers")
 
 
 def main() -> None:

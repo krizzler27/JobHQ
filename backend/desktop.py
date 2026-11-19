@@ -4,7 +4,6 @@ Runs the FastAPI web server and background worker runner in unified cooperative 
 enabling a single standalone binary sidecar for Tauri.
 """
 
-import logging
 import os
 import sys
 import threading
@@ -17,36 +16,32 @@ if _ROOT not in sys.path:
 
 import uvicorn
 from backend.core.config import config
+from backend.core.logging import setup_logging
 from backend.main import create_app
 from backend.workers.core.registry import get_default_workers
 from backend.workers.core.runner import WorkerRunner
 from backend.api.deps import get_app_context
 
+logger = setup_logging("jobhq.desktop")
+
 
 def run_worker_thread(runner: WorkerRunner, stop_event: threading.Event) -> None:
-    logging.info("[desktop] Background worker thread started (15s tick loop).")
+    logger.info("Background worker thread started (15s tick loop).")
     while not stop_event.is_set():
         try:
             runner.run_tick()
         except Exception as err:
-            logging.error(f"[desktop] Error in worker tick: {err}", exc_info=True)
+            logger.error(f"Error in worker tick: {err}", exc_info=True)
         # Sleep with 1-second interruptible steps
         for _ in range(15):
             if stop_event.is_set():
                 break
             time.sleep(1)
-    logging.info("[desktop] Background worker thread stopped.")
+    logger.info("Background worker thread stopped.")
 
 
 def main() -> None:
-    logging.basicConfig(
-        level=getattr(logging, config.log_level.upper(), logging.INFO),
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%H:%M:%S",
-        stream=sys.stdout,
-        force=True,
-    )
-    logging.info(f"[desktop] Starting JobHQ unified desktop backend on port {config.port}...")
+    logger.info(f"Starting JobHQ unified desktop backend on port {config.port}...")
 
     ctx = get_app_context()
     
@@ -77,10 +72,10 @@ def main() -> None:
     try:
         server.run()
     finally:
-        logging.info("[desktop] Shutting down worker thread...")
+        logger.info("Shutting down worker thread...")
         stop_event.set()
         worker_thread.join(timeout=2.0)
-        logging.info("[desktop] Shutdown complete.")
+        logger.info("Shutdown complete.")
 
 
 if __name__ == "__main__":
