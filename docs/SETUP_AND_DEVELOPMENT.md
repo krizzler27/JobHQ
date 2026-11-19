@@ -1,6 +1,6 @@
 # Setup, Configuration & Development Guide
 
-This guide covers everything needed after cloning the repository: installation, environment variables, email provider setup, scan filters, backup/restore, and local development/testing.
+This guide covers everything needed after cloning the repository: local installation, configuration, email provider setup, background task management, Tauri desktop development, and safe testing commands.
 
 ---
 
@@ -8,13 +8,14 @@ This guide covers everything needed after cloning the repository: installation, 
 
 - **Python 3.10+**
 - **Node.js 18+** and **npm**
-- *(Optional)* **Git** and **`uv`** (automatically installed by `install.sh` / `install.bat` if missing)
+- *(Recommended)* **`uv`** (fast Python package and project manager)
+- *(Optional for Desktop)* **Rust & Cargo** (for Tauri v2 desktop development)
 
 ---
 
 ## 2. Installation Options
 
-### Option A: One-Step Installer (Recommended)
+### Option A: One-Step Automated Installer
 - **macOS / Linux:**
   ```bash
   chmod +x install.sh
@@ -25,99 +26,119 @@ This guide covers everything needed after cloning the repository: installation, 
   install.bat
   ```
 
-Both scripts:
-1. Ensure `uv` is installed and run `uv sync` (creates `.venv` and installs FastAPI, Uvicorn, SQLAlchemy, `cryptography`, and prebuilt CPU wheels for `llama-cpp-python`).
-2. Initialize `data/job_tracker.db`.
-3. Run `npm install`.
+Both installer scripts:
+1. Ensure `uv` is available and run `uv sync` (creates `.venv` and installs FastAPI, Uvicorn, SQLAlchemy, `cryptography`, `pydantic-settings`, and prebuilt CPU wheels for `llama-cpp-python`).
+2. Run `npm install` for frontend build tools, Vite, Tailwind CSS v4, and Tauri v2 dependencies.
 
 ### Option B: Manual Setup via `uv`
 ```bash
-# 1. Sync Python virtual environment & dependencies
+# 1. Sync Python dependencies and virtual environment
 uv sync
 
-# 2. Initialize SQLite schema
-.venv/bin/python -c "from backend.core.database import DatabaseManager; DatabaseManager().init_schema()"
-
-# 3. Install frontend packages
+# 2. Install frontend and build packages
 npm install
 ```
 
 ---
 
-## 3. Configuration & Local Storage
+## 3. Configuration & Storage Paths (`~/.jobhq`)
 
-All mailbox credentials, search filters, and application preferences are managed directly through the web UI and persisted in `data/job_tracker.db` with zero `.env` files required:
+JobHQ defaults to storing all databases, backups, models, and secret keys in `~/.jobhq/` ([backend/core/config.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/core/config.py)). No `.env` file is required for standard usage, but path and port overrides are supported via environment variables:
 
-- **Email Credentials**: Configured via the Setup Wizard or Settings modal and stored with Fernet AES-128 encryption.
-- **Provider Hosts**: Presets for Gmail, Outlook, and Yahoo are built-in automatically.
-- **Optional System Environment Variables**:
-  - `HOST`: Bind address for Express (`127.0.0.1` by default).
-  - `PY_BACKEND_PORT`: Internal FastAPI port (`3001` by default).
-  - `JOB_TRACKER_KEY`: Optional custom Fernet key overriding `data/.secret.key`.
-
----
-
-## 4. Connecting Your Email (App Passwords & Multi-Folder Sync)
-
-Because standard password logins are disabled by major providers for IMAP, generate an **App Password**:
-- **Gmail:** Enable 2-Step Verification in Google Account Security → search **App passwords** → create one for *Mail* (16 characters, spaces optional). Make sure IMAP is enabled in Gmail Settings → *Forwarding and POP/IMAP*.
-- **Outlook / Hotmail:** Microsoft Account Security → *Advanced security options* → *Create a new app password* (if 2FA is active). Host: `outlook.office365.com:993`.
-- **Yahoo Mail:** Yahoo Account Security → *Generate app password*. Host: `imap.mail.yahoo.com:993`.
-
-Inside **Connect Email** (or Quick Setup Step 1), click **Load My Folders** to pick multiple folders or Gmail labels at once.
+| Setting | Variable | Default | Description |
+| :--- | :--- | :--- | :--- |
+| **Home Directory** | `JOBHQ_HOME_DIR` | `~/.jobhq` | Root directory for application state |
+| **Database Path** | `JOBHQ_DB_PATH` or `DB_PATH` | `~/.jobhq/jobhq.db` | Primary SQLite database |
+| **Secret Key Path** | `JOBHQ_SECRET_KEY_PATH` or `SECRET_KEY_PATH` | `~/.jobhq/.secret.key` | Fernet AES-128 encryption key |
+| **Backups Directory**| `JOBHQ_BACKUPS_DIR` or `BACKUPS_DIR` | `~/.jobhq/backups/` | Automated and manual database snapshots |
+| **Models Directory** | `JOBHQ_MODELS_DIR` or `MODELS_DIR` | `~/.jobhq/models/` | Quantized `.gguf` local AI model files |
+| **Backend Port** | `JOBHQ_PORT` or `PY_BACKEND_PORT` | `3001` | FastAPI port |
+| **Master Fernet Key**| `JOBHQ_ENCRYPTION_KEY` or `JOB_TRACKER_KEY` | *(None)* | Optional custom symmetric Fernet key string |
 
 ---
 
-## 5. Customizing Scan Filters & Auto-Sync
+## 4. Connecting Your Email (App Passwords)
 
-### Scan Keywords (`Settings → Email Scan Filters` or Quick Setup Step 4)
-Before downloading full message bodies, IMAP searches headers using:
-1. **Subject Keywords to Scan** (combined with your **Target Job Titles** & **Skills**)
-2. **Sender & Domain Keywords to Scan** (plus companies currently in your Applications list)
-3. **Skip / Noise Words (Always Ignore)** — drops any message whose sender or subject contains a blocked term.
+Major email providers require dedicated **App Passwords** for IMAP access:
+- **Gmail:** Enable 2-Step Verification in Google Account Security → search **App passwords** → generate a 16-character password for *Mail*. Confirm IMAP is enabled in Gmail Settings (*Forwarding and POP/IMAP*).
+- **Outlook / Hotmail:** Microsoft Account Security → *Advanced security options* → *Create a new app password* (Host: `outlook.office365.com:993`).
+- **Yahoo Mail:** Yahoo Account Security → *Generate app password* (Host: `imap.mail.yahoo.com:993`).
 
-**Tip:** Whenever non-job mail slips into Applications, Interviews, or Job Alerts, use **Filter Non-Career Email** directly on that item to add its sender, domain, or subject words to **Skip / Noise Words** and optionally delete the item. After changing keywords, click **Force Re-scan** in the **Scanned Emails** tab to re-evaluate recent messages.
-
-### Auto-Sync Schedule (Unix Cron)
-Enable **Auto-Sync** in **Settings** using either quick templates (`Every 30 min`, `Every 4 hours`, `Daily 9 AM`, `Weekdays 9–6 (2h)`) or any 5-field Unix cron expression (`minute hour day month weekday`). Auto-sync is evaluated continuously by the background worker daemon (`python -m backend.workers`) whenever `npm run dev` / `npm start` is active. For details on how workers run or how to add custom background tasks, see [Background Worker System (`docs/WORKERS.md`)](WORKERS.md).
+Inside **Connect Email** (or Quick Setup Step 1), click **Load My Folders** to select specific folders or Gmail labels (e.g. `INBOX`, `Careers`, `Job Alerts`).
 
 ---
 
-## 6. Local Data, Encryption & Backups
+## 5. Development & Running the Application
 
-- **Database file:** `data/job_tracker.db`
-- **Encryption key:** `data/.secret.key` (`0600` permissions; never commit `data/` to Git).
-- **Decrypting a saved password locally:**
-  ```bash
-  .venv/bin/python -m backend.cli.decrypt_password
-  # Optional flags: --db path/to/db --key-file path/to/key --key <fernet_key>
-  ```
-- **Backups (`Settings → Data Backup & Restore`):**
-  - **Export JSON:** Downloads a secret-free `.json` archive of applications, interviews, job alerts, and profile/scan preferences. Restorable in **Merge** mode (adds missing items safely) or **Replace** mode.
-  - **Download `.db`:** Downloads an atomic SQLite snapshot of `data/job_tracker.db`.
+### Web Development Mode
+```bash
+npm run dev
+```
+Spawns:
+1. Python Web API (`127.0.0.1:3001`).
+2. Python Worker Daemon (`python -m backend.workers`).
+3. Express + Vite development server on **http://localhost:3000**.
+
+### Tauri Native Desktop Development Mode
+```bash
+npm run tauri:dev
+```
+Launches the native desktop application shell with the custom frameless Studio window titlebar, native OS notifications, and Vite hot-reloading.
+
+### Production Build & Serving (Web)
+```bash
+npm run build
+npm start
+```
+
+### Standalone Worker Daemon Execution
+To run only the background worker loop in your terminal for debugging:
+```bash
+# macOS / Linux
+.venv/bin/python -m backend.workers
+
+# Windows
+.venv\Scripts\python.exe -m backend.workers
+```
 
 ---
 
-## 7. Development & Verification Commands
+## 6. Verification & Automated Testing
 
-| Task | Command | Notes |
-| :--- | :--- | :--- |
-| Start dev server | `npm run dev` | Spawns FastAPI (`:3001`), Worker Daemon, and Express/Vite (`:3000`). |
-| TypeScript check | `npm run lint` | Runs `tsc --noEmit`. |
-| Run frontend tests | `npm test` | Runs Vitest test suites. |
-| Production build | `npm run build` | Builds frontend assets to `dist/`. |
-| Start production build | `npm start` | Serves `dist/` via Express + FastAPI + Worker Daemon. |
-| Run standalone worker | `.venv/bin/python -m backend.workers` | Runs background worker loop directly in CLI. |
-| Backend unit tests | `.venv/bin/python -m unittest discover -s backend/tests -v` | Runs isolated `:memory:` tests cleanly. |
-
-### Safe Backend Testing (Without Touching `data/job_tracker.db`)
-Always pass `":memory:"` (never `"sqlite:///:memory:"`) to `DatabaseManager` when running ad-hoc Python checks so your live SQLite database remains untouched:
+Always verify both frontend and backend suites before making changes:
 
 ```bash
-.venv/bin/python -c "
-from backend.core.database import DatabaseManager
-db = DatabaseManager(':memory:')
-db.init_schema()
-print('In-memory schema OK')
-"
+# 1. Frontend type checking and unit tests
+npm run lint          # runs tsc --noEmit
+npm run test          # runs tsx --test src/**/*.test.ts
+
+# 2. Backend unit tests (in-memory isolated tests)
+# macOS / Linux
+.venv/bin/python -m unittest discover -s backend/tests -v
+
+# Windows
+.venv\Scripts\python.exe -m unittest discover -s backend/tests -v
 ```
+
+### Safe In-Memory Python Testing
+When testing database logic via Python CLI, always use in-memory databases (`:memory:`) to ensure live database files remain untouched:
+```python
+from backend.core.database import DatabaseManager
+db = DatabaseManager(":memory:")
+db.init_schema()
+print("Schema verified cleanly.")
+```
+
+---
+
+## 7. Password Recovery & Decryption CLI
+
+If you need to view or debug your stored IMAP password outside of the UI:
+```bash
+# macOS / Linux
+.venv/bin/python -m backend.cli.decrypt_password
+
+# Windows
+.venv\Scripts\python.exe -m backend.cli.decrypt_password
+```
+Supports optional flags `--db <path>`, `--key-file <path>`, and `--key <fernet_key_string>`.

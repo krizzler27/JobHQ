@@ -1,7 +1,7 @@
 [project]
-name = "job-tracker"
+name = "jobhq"
 version = "1.0.0"
-description = "Lightweight local IMAP job application tracker with FastAPI, SQLAlchemy, and optional local AI parsing"
+description = "JobHQ: Local-first personal job tracker & application hub with IMAP sync, background worker daemon, and optional local AI parsing"
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115.0",
@@ -9,6 +9,7 @@ dependencies = [
     "sqlalchemy>=2.0.0",
     "llama-cpp-python>=0.3.16",
     "cryptography>=43.0.0",
+    "pydantic-settings>=2.0.0",
 ]
 
 [[tool.uv.index]]
