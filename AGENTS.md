@@ -1,4 +1,4 @@
-# JobHQ — Agent & Development Instructions
+# JobHQ: Agent & Development Instructions
 
 This document records the core architectural principles, design standards, and collaboration workflows for **JobHQ**. All agents and developers working on this codebase must follow these conventions.
 
@@ -8,9 +8,9 @@ This document records the core architectural principles, design standards, and c
 
 - **Official Name**: **JobHQ**
 - **Brand Assets** (`public/img/`):
-  - `Logo Icon Light No BG.png` — Mark / icon only (transparent).
-  - `Logo Text Light No BG.png` — Wordmark typography only (transparent).
-  - `Logo Light No BG.png` — Combined mark and wordmark.
+  - `Logo Icon Light No BG.png`: Mark / icon only (transparent).
+  - `Logo Text Light No BG.png`: Wordmark typography only (transparent).
+  - `Logo Light No BG.png`: Combined mark and wordmark.
 - **Tone & Voice**: Editorial, calm, high-density, and utilitarian.
   - Zero corporate fluff or generic AI marketing jargon (avoid phrasing like "AI-powered insights engine" or "pipeline progression tracker").
   - Use clear, professional English: *"Applications & Activity: Breakdown by stage and your daily pace."*

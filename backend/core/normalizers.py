@@ -8,7 +8,42 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 _CORP_SUFFIX_RE = re.compile(
     r"\b(inc|incorporated|llc|ltd|limited|corp|corporation|co|company|pvt|private|plc|gmbh)\b"
 )
-_TRACKING_QUERY_PREFIXES = ("utm_", "trk", "ref", "fbclid", "gclid", "mc_", "referrer", "source")
+_TRACKING_QUERY_PREFIXES = (
+    "utm_",
+    "trk",
+    "ref",
+    "fbclid",
+    "gclid",
+    "mc_",
+    "referrer",
+    "source",
+    "trackingid",
+    "refid",
+    "midtoken",
+    "midsig",
+    "otptoken",
+    "lipi",
+    "eid",
+    "alertaction",
+    "savedsearchid",
+    "savedsearchauthtoken",
+    "aqf",
+    "atyj",
+    "asc",
+    "xid",
+    "src",
+    "xp",
+    "f",
+    "mid",
+    "rdxmsgid",
+    "messageid",
+    "uid",
+    "vcardid",
+    "applysrc",
+    "sajejd",
+    "showlb",
+    "xz",
+)
 
 
 def clean_http_url(raw: Any) -> str:
@@ -41,7 +76,27 @@ def normalize_url_key(raw: Any) -> str:
     host = parts.netloc.lower()
     if host.startswith("www."):
         host = host[4:]
+
+    # Canonical job posting path normalization
     path = parts.path.rstrip("/")
+    # LinkedIn: /comm/jobs/view/<id> or /jobs/view/<id> -> linkedin.com/jobs/view/<id>
+    if "linkedin.com" in host:
+        m = re.search(r"/jobs/view/(\d+)", path)
+        if m:
+            return f"linkedin.com/jobs/view/{m.group(1)}"
+
+    # Naukri: /jd/<slug>-<jobId> -> naukri.com/jd/<jobId>
+    if "naukri.com" in host:
+        m = re.search(r"-(\d{10,14})(?:[/?#]|$)", path)
+        if m:
+            return f"naukri.com/jd/{m.group(1)}"
+
+    # Indeed: /viewjob?jk=<id> or /rc/clk?jk=<id>
+    if "indeed.com" in host:
+        params = dict(parse_qsl(parts.query, keep_blank_values=False))
+        if "jk" in params:
+            return f"indeed.com/viewjob/{params['jk']}"
+
     kept_params = [
         (k, v)
         for k, v in parse_qsl(parts.query, keep_blank_values=False)

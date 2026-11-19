@@ -441,10 +441,27 @@ class ImapSyncService:
             elif category == "job_alert":
                 msg_alerts_added = 0
                 for item in extracted_alerts:
+                    # 1. Skip duplicate within same email message
                     if alert_repo.exists_for_message_title(
                         item["job_title"], alert_source_app, msg_id
                     ):
                         continue
+
+                    # 2. Skip global duplicate across past emails (canonical URL or title + company/platform)
+                    existing_alert = alert_repo.find_existing_alert(
+                        job_title=item["job_title"],
+                        company_name=item.get("company_name", ""),
+                        job_url=item.get("job_url", ""),
+                        source_app=alert_source_app,
+                    )
+                    if existing_alert:
+                        # Refresh latest timestamp and job link if new link is better
+                        if date_iso > (existing_alert.received_at or ""):
+                            existing_alert.received_at = date_iso
+                        if item.get("job_url") and not existing_alert.job_url:
+                            existing_alert.job_url = item["job_url"]
+                        continue
+
                     score, reason = score_job_title(
                         item["job_title"],
                         item["company_name"],

@@ -4,7 +4,7 @@ from sqlalchemy import func, or_, select
 
 from backend.core.constants import VALID_ALERT_STATUSES, VALID_APP_STATUSES
 from backend.core.models import Application, JobAlert, ProcessedEmail, now_iso
-from backend.core.normalizers import clean_http_url
+from backend.core.normalizers import clean_http_url, normalize_company, normalize_url_key
 from backend.repositories.applications import ApplicationRepository
 from backend.repositories.base import BaseRepository
 from backend.repositories.interviews import InterviewRepository
@@ -50,6 +50,53 @@ class JobAlertRepository(BaseRepository[JobAlert]):
             )
             is not None
         )
+
+    def find_existing_alert(
+        self,
+        job_title: str,
+        company_name: str = "",
+        job_url: str = "",
+        source_app: str = "",
+    ) -> JobAlert | None:
+        """Finds an existing matching alert across all emails to prevent duplicates."""
+        url_key = normalize_url_key(job_url)
+
+        # 1. Direct canonical URL match if available
+        if url_key:
+            # Query non-empty urls to check normalized match
+            candidates = list(
+                self.session.scalars(
+                    select(JobAlert)
+                    .where(JobAlert.job_url != "")
+                    .order_by(JobAlert.id.desc())
+                    .limit(200)
+                )
+            )
+            for cand in candidates:
+                if normalize_url_key(cand.job_url) == url_key:
+                    return cand
+
+        # 2. Match by normalized title + company (or title + source_app if company is blank)
+        norm_title = job_title.strip().lower()
+        norm_co = normalize_company(company_name)
+
+        if norm_title:
+            stmt = select(JobAlert).where(func.lower(JobAlert.job_title) == norm_title)
+            if source_app:
+                stmt = stmt.where(JobAlert.source_app == source_app)
+            matches = list(self.session.scalars(stmt.order_by(JobAlert.id.desc()).limit(20)))
+
+            for m in matches:
+                cand_co = normalize_company(m.company_name)
+                # If company is provided, verify company match
+                if norm_co and cand_co:
+                    if norm_co == cand_co:
+                        return m
+                elif not norm_co and not cand_co:
+                    # Both lack company; same title & platform is considered duplicate
+                    return m
+
+        return None
 
     def exists_for_message(self, message_id: str) -> bool:
         if not message_id:

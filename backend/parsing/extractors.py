@@ -333,6 +333,13 @@ def extract_job_alert_titles(
         if low.startswith(("hi ", "hello ", "dear ", "new jobs", "based on your")):
             continue
 
+        # Exclude bulleted job responsibilities/action verbs often found in broadcast descriptions
+        if re.match(
+            r"^(?:support|troubleshoot|collect|perform|participate|assist|escalate|manage|ensure|collaborate|maintain|develop|build|design|write|create|deliver|implement|monitor|configure)\s+",
+            low,
+        ):
+            continue
+
         has_role_word = any(w in low for w in ROLE_HINT_WORDS)
         at_match = re.match(r"^(.{4,75}?)\s+(?:at|@)\s+([A-Z][A-Za-z0-9&.,' ]{1,45})$", line)
         dash_match = re.match(r"^(.{4,75}?)\s+[–\-|]\s+([A-Z][A-Za-z0-9&.,' ]{1,45})$", line)

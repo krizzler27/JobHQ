@@ -16,7 +16,7 @@
                                         | HTTP /api/* & static assets
                                         v
 +-------------------------------------------------------------------------------+
-| Node / Express Host (server.ts) — 127.0.0.1:3000                              |
+| Node / Express Host (server.ts): 127.0.0.1:3000                               |
 | - Spawns & supervises two independent Python child processes                  |
 | - Dev: mounts Vite middleware (appType: 'spa')                                |
 | - Prod: serves built ./dist static files                                      |

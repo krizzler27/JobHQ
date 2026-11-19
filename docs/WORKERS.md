@@ -53,16 +53,16 @@ Job Tracker uses a **multi-process supervisor architecture** orchestrated by [se
 
 Scheduling infrastructure is strictly separated from concrete domain jobs:
 
-- [backend/workers/core/base.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/core/base.py) — Abstract `BaseWorker` contract with `default_interval_minutes`.
-- [backend/workers/core/runner.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/core/runner.py) — Desktop-first `WorkerRunner` scheduler and thread dispatcher.
-- [backend/repositories/worker_state.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/repositories/worker_state.py) — Persisted execution states & interval checks (`worker_states` table).
-- [backend/workers/email_job_sync.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/email_job_sync.py) — Concrete worker synchronizing job pipeline updates from IMAP email (every 4h).
-- [backend/workers/interview_lifecycle.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/interview_lifecycle.py) — Concrete worker auto-completing past scheduled interviews (every 1h).
-- [backend/workers/auto_ghost.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_ghost.py) — Concrete worker auto-ghosting stale applied applications (every 24h).
-- [backend/workers/auto_backup.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_backup.py) — Concrete worker taking hot SQLite snapshots to `data/backups/jobhq_latest.db` (every 7d).
-- [backend/workers/alert_cleanup.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/alert_cleanup.py) — Concrete worker pruning noisy unapplied alerts older than 5 days (every 5d).
-- [backend/workers/__main__.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/__main__.py) — Daemon process entrypoint (`python -m backend.workers`).
-- `backend/workers/__init__.py` and `backend/workers/core/__init__.py` — Empty package markers (0 bytes). Modules use explicit imports to avoid re-export bloat and circular dependencies.
+- [backend/workers/core/base.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/core/base.py): Abstract `BaseWorker` contract with `default_interval_minutes`.
+- [backend/workers/core/runner.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/core/runner.py): Desktop-first `WorkerRunner` scheduler and thread dispatcher.
+- [backend/repositories/worker_state.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/repositories/worker_state.py): Persisted execution states & interval checks (`worker_states` table).
+- [backend/workers/email_job_sync.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/email_job_sync.py): Concrete worker synchronizing job pipeline updates from IMAP email (every 4h).
+- [backend/workers/interview_lifecycle.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/interview_lifecycle.py): Concrete worker auto-completing past scheduled interviews (every 1h).
+- [backend/workers/auto_ghost.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_ghost.py): Concrete worker auto-ghosting stale applied applications (every 24h).
+- [backend/workers/auto_backup.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/auto_backup.py): Concrete worker taking hot SQLite snapshots to `data/backups/jobhq_latest.db` (every 7d).
+- [backend/workers/alert_cleanup.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/alert_cleanup.py): Concrete worker pruning noisy unapplied alerts older than 5 days (every 5d).
+- [backend/workers/__main__.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/__main__.py): Daemon process entrypoint (`python -m backend.workers`).
+- `backend/workers/__init__.py` and `backend/workers/core/__init__.py`: Empty package markers (0 bytes). Modules use explicit imports to avoid re-export bloat and circular dependencies.
 
 ---
 
