@@ -26,6 +26,7 @@ import type { NavTab, ThemeMode } from './components/AppNavigation';
 import { BatchDeleteKeywordModal } from './components/BatchDeleteKeywordModal';
 import type { BatchDeleteCandidateItem } from './components/BatchDeleteKeywordModal';
 import { CalendarView } from './components/CalendarView';
+import { DesktopTitleBar } from './components/DesktopTitleBar';
 import { DuplicateGuardModal } from './components/DuplicateGuardModal';
 import type { DuplicateGuardCandidate } from './components/DuplicateGuardModal';
 import { EmailFilterModal } from './components/EmailFilterModal';
@@ -146,7 +147,7 @@ export default function App() {
   const [theme, setTheme] = useState<ThemeMode>(() => {
     try {
       const saved = window.localStorage.getItem('job_tracker_theme');
-      if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
+      if (saved === 'light' || saved === 'dark') return saved;
     } catch {
       // Ignore storage failures
     }
@@ -156,22 +157,13 @@ export default function App() {
   useEffect(() => {
     const root = document.documentElement;
     const applyTheme = () => {
-      const isDark =
-        theme === 'dark' ||
-        (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      const isDark = theme === 'dark';
       root.classList.toggle('dark', isDark);
     };
     applyTheme();
     try {
       window.localStorage.setItem('job_tracker_theme', theme);
     } catch {}
-
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const listener = () => {
-      if (theme === 'system') applyTheme();
-    };
-    media.addEventListener('change', listener);
-    return () => media.removeEventListener('change', listener);
   }, [theme]);
   const [overviewPaceMode, setOverviewPaceMode] = useState<'daily' | 'weekly'>('weekly');
 
@@ -845,22 +837,24 @@ export default function App() {
   const imap = dashboard?.imap;
 
   return (
-    <div className="min-h-screen flex bg-[var(--canvas)] text-slate-900 dark:text-slate-100 transition-colors duration-150">
-      <AppSidebar
-        sidebarOpen={sidebarOpen}
-        onToggleSidebar={toggleSidebar}
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        relevantAlertsCount={dashboard?.kpis.relevant_alerts || 0}
-        upcomingInterviewsCount={dashboard?.kpis.upcoming_interviews || 0}
-        imap={imap}
-        onOpenImapModal={() => setShowImapModal(true)}
-        theme={theme}
-        onSelectTheme={setTheme}
-      />
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[var(--canvas)] text-slate-900 dark:text-slate-100 transition-colors duration-150">
+      <DesktopTitleBar />
+      <div className="flex-1 flex overflow-hidden min-h-0">
+        <AppSidebar
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={toggleSidebar}
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          relevantAlertsCount={dashboard?.kpis.relevant_alerts || 0}
+          upcomingInterviewsCount={dashboard?.kpis.upcoming_interviews || 0}
+          imap={imap}
+          onOpenImapModal={() => setShowImapModal(true)}
+          theme={theme}
+          onSelectTheme={setTheme}
+        />
 
-      {/* Main Content */}
-      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Main Content */}
+        <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
         <AppHeader
           sidebarOpen={sidebarOpen}
           onToggleSidebar={toggleSidebar}
@@ -878,7 +872,7 @@ export default function App() {
           onOpenImapModal={() => setShowImapModal(true)}
         />
 
-        <main className="flex-1 p-6 space-y-6 max-w-[1440px] w-full mx-auto">
+        <main className="flex-1 overflow-y-auto p-6 space-y-6 max-w-[1440px] w-full mx-auto">
           {syncing && syncJob && (() => {
             const progress = calculateSyncProgress(syncJob);
             return (
@@ -1419,6 +1413,7 @@ export default function App() {
           }
         }}
       />
+      </div>
     </div>
   );
 }

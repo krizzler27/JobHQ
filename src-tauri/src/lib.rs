@@ -3,6 +3,7 @@ pub fn run() {
   tauri::Builder::default()
     .runtime(tauri_runtime_wry::Wry::default())
     .setup(|app| {
+      app.handle().plugin(tauri_plugin_notification::init())?;
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()

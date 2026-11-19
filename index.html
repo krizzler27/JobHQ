@@ -18,9 +18,10 @@
     <script>
       try {
         const saved = localStorage.getItem('job_tracker_theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (saved === 'dark' || ((!saved || saved === 'system') && prefersDark)) {
+        if (saved === 'dark') {
           document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
         }
       } catch (e) {}
     </script>
