@@ -26,7 +26,8 @@ JobHQ was architecturally designed with a decoupled **3-tier execution model**:
 
 On a user's desktop, running two separate OS processes (`jobhq-api.exe` and `jobhq-worker.exe`) creates operational issues: dual process trees, orphaned background processes on window close, and complex IPC monitoring.
 
-To solve this cleanly, [desktop_entry.py](file:///C:/Disk-S/Projects/Job-Tracker/desktop_entry.py) acts as a **unified desktop pod**:
+To solve this cleanly, [backend/desktop.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/desktop.py) acts as a **unified desktop pod**:
+- **Central Worker Registry**: [backend/workers/core/registry.py](file:///C:/Disk-S/Projects/Job-Tracker/backend/workers/core/registry.py) acts as the single source of truth (`get_default_workers`) for all background jobs.
 - **Main Thread**: Runs the Uvicorn ASGI server serving the FastAPI REST API on loopback `127.0.0.1:3001`.
 - **Background Daemon Thread**: Runs `WorkerRunner` with cooperative 1-second interruptible sleep steps so workers never block API responsiveness or desktop shutdown.
 
@@ -107,18 +108,29 @@ To solve this cleanly, [desktop_entry.py](file:///C:/Disk-S/Projects/Job-Tracker
 
 | Mode | Command | Frontend | Backend | Sidecar Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Web Dev** | `npm run dev` | Vite Dev Server (`:3000`) | `server.ts` supervises `.venv` Python child processes | Not used (hot-reloading via Python interpreter) |
-| **Desktop Dev** | `npm run tauri:dev` | Vite Dev Server (`:3000`) in WebView2 | Runs sidecar if built, or uses running dev backend | Hot reload frontend; native desktop controls active |
-| **Production Build** | `npm run tauri build` | Built `./dist` assets bundled in webview | Frozen binary in `src-tauri/binaries` | Bundled directly into `.msi` / `.exe` installer |
+| **Web Dev** | `npm run dev` | Vite Dev Server (`:3000`) | `server.ts` runs FastAPI (`backend`) & standalone worker (`backend.workers`) | Development mode (Python interpreter with hot reloading) |
+| **Desktop Dev** | `npm run tauri:dev` | Vite Dev Server (`:3000`) in WebView2 | Runs `backend.desktop` unified runner (`JOBHQ_DESKTOP_DEV=1`) | Executes identical multi-thread code as the production sidecar |
+| **Single-Command Build** | `npm run desktop:build` | Full build & test pipeline | Packages sidecar via PyInstaller and creates installer via Tauri | Self-contained `.exe` installer in `src-tauri/target/release/bundle/nsis/` |
 
 ---
 
-## 5. Rebuilding the Python Sidecar
+## 5. Building the Desktop Application
 
-When backend models, routes, or workers are updated, recompile the sidecar executable with one command:
+You can build the entire production desktop application with **one command**:
 
-```powershell
-uv run pyinstaller --distpath src-tauri/binaries --workpath build jobhq_backend.spec
+```bash
+# Windows
+npm run desktop:build
+# (or double-click build-desktop.bat)
+
+# macOS / Linux
+./build-desktop.sh
 ```
 
-The output binary is automatically placed into `src-tauri/binaries/jobhq-backend-x86_64-pc-windows-msvc.exe` and bundled on the next `npm run tauri build`.
+This single command automatically:
+1. Runs all TypeScript checks (`npm run lint`), frontend tests (`npm run test`), and backend tests (`python -m unittest`).
+2. Compiles the Python desktop backend into a standalone native binary in `src-tauri/binaries/` via PyInstaller.
+3. Builds the production Vite frontend bundle (`npm run build`).
+4. Bundles everything into the native installer (`npm run tauri build`).
+
+Output installer location: `src-tauri/target/release/bundle/nsis/JobHQ_0.1.0_x64-setup.exe`.

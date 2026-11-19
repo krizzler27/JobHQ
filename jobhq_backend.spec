@@ -22,7 +22,7 @@ hiddenimports = [
 ]
 
 a = Analysis(
-    ['desktop_entry.py'],
+    ['backend/desktop.py'],
     pathex=[],
     binaries=[],
     datas=datas,

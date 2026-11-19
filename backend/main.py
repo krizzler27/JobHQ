@@ -54,7 +54,7 @@ app = create_app()
 
 
 def main() -> None:
-    uvicorn.run(app, host="127.0.0.1", port=config.port, log_level="info")
+    uvicorn.run(app, host=config.host, port=config.port, log_level="info")
 
 
 if __name__ == "__main__":

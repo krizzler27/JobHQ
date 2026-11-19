@@ -12,7 +12,8 @@
     "lint": "tsc --noEmit",
     "test": "tsx --test src/**/*.test.ts",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev"
+    "tauri:dev": "tauri dev",
+    "desktop:build": "build-desktop.bat"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
