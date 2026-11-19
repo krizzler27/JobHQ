@@ -75,6 +75,23 @@ pub fn run() {
             .build(),
         )?;
       }
+
+      // Fallback safety: If frontend doesn't invoke window.show() within 3s,
+      // reveal the window so the app is never left hidden if a script fails.
+      if let Some(main_win) = app.get_webview_window("main") {
+        let win = main_win.clone();
+        std::thread::spawn(move || {
+          std::thread::sleep(std::time::Duration::from_millis(3000));
+          if let Ok(is_visible) = win.is_visible() {
+            if !is_visible {
+              let _ = win.maximize();
+              let _ = win.show();
+              let _ = win.set_focus();
+            }
+          }
+        });
+      }
+
       Ok(())
     })
     .run(tauri::generate_context!())

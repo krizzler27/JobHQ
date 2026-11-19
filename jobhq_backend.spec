@@ -2,7 +2,23 @@
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
+import os
+import sys
+
 block_cipher = None
+
+# Determine platform target triple dynamically
+is_win = sys.platform.startswith('win')
+is_darwin = sys.platform == 'darwin'
+
+if is_win:
+    exe_name = 'jobhq-backend-x86_64-pc-windows-msvc'
+elif is_darwin:
+    import platform
+    arch = 'aarch64' if platform.machine() == 'arm64' else 'x86_64'
+    exe_name = f'jobhq-backend-{arch}-apple-darwin'
+else:
+    exe_name = 'jobhq-backend-x86_64-unknown-linux-gnu'
 
 datas = []
 hiddenimports = [
@@ -46,7 +62,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='jobhq-backend-x86_64-pc-windows-msvc',
+    name=exe_name,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

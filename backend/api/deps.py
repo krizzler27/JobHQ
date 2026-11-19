@@ -16,6 +16,11 @@ class AppContext:
     sync_service: ImapSyncService
     sync_job_manager: SyncJobManager
 
+    @property
+    def sync_jobs(self) -> SyncJobManager:
+        """Alias for sync_job_manager for ergonomics and backward compatibility."""
+        return self.sync_job_manager
+
 
 def create_app_context(db_path: str | None = None) -> AppContext:
     db = DatabaseManager(db_path=db_path)

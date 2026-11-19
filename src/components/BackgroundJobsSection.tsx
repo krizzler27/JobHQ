@@ -68,6 +68,7 @@ export const BackgroundJobsSection: React.FC<BackgroundJobsSectionProps> = ({
   onRunWorker,
 }) => {
   const [runningMap, setRunningMap] = useState<Record<string, boolean>>({});
+  const [justCompletedMap, setJustCompletedMap] = useState<Record<string, boolean>>({});
   const [savingMap, setSavingMap] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
@@ -112,10 +113,23 @@ export const BackgroundJobsSection: React.FC<BackgroundJobsSectionProps> = ({
   };
 
   const handleRun = async (worker: WorkerConfig) => {
+    const isAsync = worker.name === 'email_job_sync';
     setRunningMap((prev) => ({ ...prev, [worker.name]: true }));
+    setJustCompletedMap((prev) => ({ ...prev, [worker.name]: false }));
     try {
       await onRunWorker(worker.name);
-      toast.success('Run Complete', `${worker.title} executed successfully.`);
+      setJustCompletedMap((prev) => ({ ...prev, [worker.name]: true }));
+      if (isAsync) {
+        toast.info(
+          'Sync Started in Background',
+          'Scanning your inbox in the background. Check the header or Overview for progress.'
+        );
+      } else {
+        toast.success('Run Complete', `${worker.title} executed successfully.`);
+      }
+      setTimeout(() => {
+        setJustCompletedMap((prev) => ({ ...prev, [worker.name]: false }));
+      }, 3500);
     } catch (err) {
       toast.error('Execution Failed', err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -158,6 +172,7 @@ export const BackgroundJobsSection: React.FC<BackgroundJobsSectionProps> = ({
         {workers.map((worker) => {
           const CategoryIcon = getCategoryIcon(worker.category);
           const isRunning = Boolean(runningMap[worker.name]);
+          const isJustCompleted = Boolean(justCompletedMap[worker.name]);
           const isSaving = Boolean(savingMap[worker.name]);
 
           return (
@@ -293,11 +308,31 @@ export const BackgroundJobsSection: React.FC<BackgroundJobsSectionProps> = ({
                   <button
                     type="button"
                     onClick={() => handleRun(worker)}
-                    disabled={isRunning}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl whitespace-nowrap transition-colors shadow-2xs disabled:opacity-50"
+                    disabled={isRunning || isJustCompleted}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl whitespace-nowrap transition-all shadow-2xs cursor-pointer ${
+                      isJustCompleted
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                        : isRunning
+                        ? 'bg-[#234aff]/10 text-[#234aff] border border-[#234aff]/30 cursor-wait'
+                        : 'text-stone-700 dark:text-slate-300 bg-white dark:bg-[#182030] border border-[#e5e3dc] dark:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800'
+                    } disabled:opacity-80`}
                   >
-                    <Play className={`w-3.5 h-3.5 fill-current ${isRunning ? 'animate-pulse text-[#234aff]' : ''}`} />
-                    {isRunning ? 'Running...' : 'Run Now'}
+                    {isRunning ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#234aff]" />
+                        Running...
+                      </>
+                    ) : isJustCompleted ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        {worker.name === 'email_job_sync' ? 'Triggered' : 'Completed'}
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        Run Now
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

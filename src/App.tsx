@@ -19,6 +19,7 @@ import {
   isStaleApplication,
 } from './utils/appHelpers';
 import { AddApplicationModal, AddInterviewModal } from './components/AddModals';
+import { AppLoadingSkeleton } from './components/AppLoadingSkeleton';
 import { ApplicationDrawer } from './components/ApplicationDrawer';
 import { ApplicationsTableView } from './components/ApplicationsTableView';
 import { AppHeader, AppSidebar, NAV_ITEMS } from './components/AppNavigation';
@@ -253,6 +254,20 @@ export default function App() {
       setLoading(false);
     }
   }, [onboardingChecked]);
+
+  useEffect(() => {
+    // In Tauri desktop environment, reveal window smoothly now that React DOM is mounted and painted
+    if (typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)) {
+      import('@tauri-apps/api/window')
+        .then(async ({ getCurrentWindow }) => {
+          const win = getCurrentWindow();
+          await win.maximize();
+          await win.show();
+          await win.setFocus();
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     loadAllData();
@@ -963,17 +978,7 @@ export default function App() {
           )}
 
           {loading ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {[0, 1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="h-20 rounded-lg border border-slate-200 bg-white animate-pulse"
-                  />
-                ))}
-              </div>
-              <div className="h-72 rounded-lg border border-slate-200 bg-white animate-pulse" />
-            </div>
+            <AppLoadingSkeleton />
           ) : activeTab === 'overview' ? (
             <OverviewView
               dashboard={dashboard}

@@ -238,6 +238,12 @@ def trigger_worker_now(
         elif name == "interview_lifecycle":
             count = lifecycle.complete_past_interviews()
             details = f"Marked {count} interview(s) completed."
+        elif name == "email_audit_prune":
+            count = lifecycle.prune_processed_email_logs(days_threshold=7)
+            details = f"Pruned raw metadata from {count} old log(s)."
+        elif name == "db_maintenance":
+            stats = lifecycle.run_database_maintenance()
+            details = f"Database hygiene completed: checkpoint={stats.get('wal_checkpoint')}, optimize={stats.get('optimize')}."
         elif name == "email_job_sync":
             if ctx.sync_jobs.get_status().get("status") == "running":
                 details = "Sync already in progress."

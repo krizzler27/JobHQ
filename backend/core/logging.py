@@ -42,8 +42,14 @@ def setup_logging(scope: str = "jobhq", level: str | None = None) -> logging.Log
     if not root_logger.handlers:
         formatter = logging.Formatter(fmt=LOG_FORMAT, datefmt=DATE_FORMAT)
 
-        # 1. Console stream handler (stdout)
-        console_handler = logging.StreamHandler(sys.stdout)
+        # 1. Console stream handler (stdout with UTF-8 / replacement fallback)
+        stream = sys.stdout
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+        console_handler = logging.StreamHandler(stream)
         console_handler.setLevel(effective_level)
         console_handler.setFormatter(formatter)
         root_logger.addHandler(console_handler)

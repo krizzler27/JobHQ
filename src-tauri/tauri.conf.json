@@ -21,7 +21,9 @@
         "maximized": true,
         "fullscreen": false,
         "center": true,
-        "decorations": false
+        "decorations": false,
+        "visible": false,
+        "backgroundColor": "#f6f5f2"
       }
     ],
     "security": {

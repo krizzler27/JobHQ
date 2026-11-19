@@ -56,6 +56,8 @@ function startPythonBackend() {
       ...process.env,
       PY_BACKEND_PORT: String(PY_PORT),
       PYTHONUNBUFFERED: '1',
+      PYTHONIOENCODING: 'utf-8',
+      PYTHONUTF8: '1',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -85,6 +87,8 @@ function startPythonWorker() {
     env: {
       ...process.env,
       PYTHONUNBUFFERED: '1',
+      PYTHONIOENCODING: 'utf-8',
+      PYTHONUTF8: '1',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -149,6 +153,8 @@ function startPythonDesktopBackend() {
       ...process.env,
       PY_BACKEND_PORT: String(PY_PORT),
       PYTHONUNBUFFERED: '1',
+      PYTHONIOENCODING: 'utf-8',
+      PYTHONUTF8: '1',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -163,7 +169,9 @@ function startPythonDesktopBackend() {
 
   child.on('exit', (code) => {
     pythonChild = null;
-    if (!isShuttingDown && code !== 0 && code !== null) {
+    // Suppress expected termination codes when shutting down or killed by supervisor (SIGTERM / taskkill return code -1 / 4294967295)
+    const isForcedExit = code === 4294967295 || code === -1 || code === 1 || code === 0;
+    if (!isShuttingDown && !isForcedExit && code !== null) {
       console.error(`[desktop-backend] Exited unexpectedly with code ${code}`);
     }
   });
