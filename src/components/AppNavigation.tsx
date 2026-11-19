@@ -72,7 +72,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 }) => {
   return (
     <aside
-      className={`sticky top-0 h-screen max-h-screen overflow-hidden shrink-0 bg-[#fcfbf9] dark:bg-[#111622] border-r border-[#e5e3dc] dark:border-slate-800/90 transition-[width] duration-200 ease-in-out z-30 flex flex-col justify-between ${
+      className={`h-full max-h-full overflow-hidden shrink-0 bg-[#fcfbf9] dark:bg-[#111622] border-r border-[#e5e3dc] dark:border-slate-800/90 transition-[width] duration-200 ease-in-out z-30 flex flex-col justify-between ${
         sidebarOpen ? 'w-60' : 'w-16'
       }`}
     >

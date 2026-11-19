@@ -141,10 +141,51 @@ function isAllowedHost(host: string | undefined): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === HOST.toLowerCase();
 }
 
+function startPythonDesktopBackend() {
+  const pythonBin = resolvePythonExecutable();
+  const child = spawn(pythonBin, ['-m', 'backend.desktop'], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      PY_BACKEND_PORT: String(PY_PORT),
+      PYTHONUNBUFFERED: '1',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  pythonChild = child;
+
+  child.stdout?.on('data', (chunk) => {
+    process.stdout.write(`[desktop-backend] ${chunk}`);
+  });
+  child.stderr?.on('data', (chunk) => {
+    process.stderr.write(`[desktop-backend] ${chunk}`);
+  });
+
+  child.on('exit', (code) => {
+    pythonChild = null;
+    if (!isShuttingDown && code !== 0 && code !== null) {
+      console.error(`[desktop-backend] Exited unexpectedly with code ${code}`);
+    }
+  });
+
+  return child;
+}
+
 async function startServer() {
-  startPythonBackend();
-  await waitForPythonReady();
-  startPythonWorker();
+  // If JOBHQ_DESKTOP_DEV is set or command-line flag --desktop is passed,
+  // run the unified backend.desktop directly so dev environment behaves
+  // identically to the compiled desktop sidecar executable.
+  const isDesktopMode =
+    process.env.JOBHQ_DESKTOP_DEV === '1' || process.argv.includes('--desktop');
+
+  if (isDesktopMode) {
+    startPythonDesktopBackend();
+    await waitForPythonReady();
+  } else {
+    startPythonBackend();
+    await waitForPythonReady();
+    startPythonWorker();
+  }
 
   const app = express();
 

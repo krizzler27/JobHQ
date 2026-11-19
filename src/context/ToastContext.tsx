@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { ToastContainer } from '../components/Toast';
+import { sendDesktopNotification, isTauriEnvironment } from '../utils/desktopNotification';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 

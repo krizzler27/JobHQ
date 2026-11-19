@@ -43,6 +43,11 @@ class JobHQConfig(BaseSettings):
     )
 
     # Server, Cryptography & Logging
+    host: str = Field(
+        default="127.0.0.1",
+        validation_alias=AliasChoices("JOBHQ_HOST", "HOST"),
+        description="FastAPI server loopback binding address (default 127.0.0.1).",
+    )
     port: int = Field(
         default=3001,
         validation_alias=AliasChoices("JOBHQ_PORT", "PY_BACKEND_PORT"),
