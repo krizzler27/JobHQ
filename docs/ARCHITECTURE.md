@@ -68,7 +68,7 @@ For detailed packaging architecture and sidecar process lifecycles, see [Desktop
                                         | Direct HTTP /api/* requests
                                         v
 +-------------------------------------------------------------------------------+
-| Standalone Python Sidecar (`desktop_entry.py` / PyInstaller binary)           |
+| Standalone Python Sidecar (`backend/desktop.py` / PyInstaller binary)        |
 | - Thread 1: FastAPI Web API server on 127.0.0.1:3001                          |
 | - Thread 2: WorkerRunner daemon evaluating background tasks every 15s         |
 | - Concurrent WAL-mode SQLite access to ~/.jobhq/jobhq.db                      |

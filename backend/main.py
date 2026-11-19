@@ -17,16 +17,9 @@ from fastapi.responses import JSONResponse
 from backend.api.deps import DEFAULT_APP_CONTEXT, AppContext, get_app_context
 from backend.api.routers.registry import register_routers
 from backend.core.config import config
+from backend.core.logging import setup_logging
 
-
-def configure_logging() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%H:%M:%S",
-        stream=sys.stdout,
-        force=True,
-    )
+logger = setup_logging("jobhq.api")
 
 
 def create_app(context: AppContext | None = None) -> FastAPI:
@@ -49,7 +42,6 @@ def create_app(context: AppContext | None = None) -> FastAPI:
     return application
 
 
-configure_logging()
 app = create_app()
 
 

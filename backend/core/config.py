@@ -41,6 +41,11 @@ class JobHQConfig(BaseSettings):
         validation_alias=AliasChoices("JOBHQ_SECRET_KEY_PATH", "SECRET_KEY_PATH"),
         description="Optional override for secret key path.",
     )
+    custom_logs_dir: Path | None = Field(
+        default=None,
+        validation_alias=AliasChoices("JOBHQ_LOGS_DIR", "LOGS_DIR"),
+        description="Optional override for logs directory.",
+    )
 
     # Server, Cryptography & Logging
     host: str = Field(
@@ -118,6 +123,21 @@ class JobHQConfig(BaseSettings):
         except OSError:
             pass
         return self.home_dir / ".secret.key"
+
+    @property
+    def logs_dir(self) -> Path:
+        """Logs directory (~/.jobhq/logs)."""
+        d = self.custom_logs_dir or (self.home_dir / "logs")
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
+        return d
+
+    @property
+    def log_file(self) -> Path:
+        """Primary rotating application log file (~/.jobhq/logs/jobhq.log)."""
+        return self.logs_dir / "jobhq.log"
 
 
 @lru_cache()
