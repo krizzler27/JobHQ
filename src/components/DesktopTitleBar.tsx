@@ -45,7 +45,8 @@ export const DesktopTitleBar: React.FC = () => {
   const handleClose = async () => {
     try {
       const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      await getCurrentWindow().close();
+      // Hide window to system tray instead of destroying process
+      await getCurrentWindow().hide();
     } catch (e) {
       console.error(e);
     }
