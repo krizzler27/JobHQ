@@ -4,6 +4,8 @@ Runs the FastAPI web server and background worker runner in unified cooperative 
 enabling a single standalone binary sidecar for Tauri.
 """
 
+import logging
+import multiprocessing
 import os
 import sys
 import threading
@@ -43,6 +45,13 @@ def run_worker_thread(runner: WorkerRunner, stop_event: threading.Event) -> None
 def main() -> None:
     logger.info(f"Starting JobHQ unified desktop backend on port {config.port}...")
 
+    # Attach logger handlers to uvicorn loggers so startup/bind errors appear in jobhq.log
+    for uvicorn_log_name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        u_logger = logging.getLogger(uvicorn_log_name)
+        u_logger.handlers = list(logger.handlers)
+        u_logger.setLevel(logger.level)
+        u_logger.propagate = False
+
     ctx = get_app_context()
     
     # Initialize background worker runner with default registered workers
@@ -65,12 +74,22 @@ def main() -> None:
         host=config.host,
         port=config.port,
         log_level=config.log_level.lower(),
+        log_config=None,
         access_log=False,
     )
     server = uvicorn.Server(uvicorn_config)
 
     try:
         server.run()
+        logger.info(
+            f"server.run() returned cleanly. started={server.started}, should_exit={server.should_exit}, force_exit={server.force_exit}"
+        )
+    except BaseException as exc:
+        logger.error(
+            f"server.run() exited with exception: {type(exc).__name__}: {exc} (started={server.started}, should_exit={server.should_exit})",
+            exc_info=True,
+        )
+        raise
     finally:
         logger.info("Shutting down worker thread...")
         stop_event.set()
@@ -79,4 +98,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     main()

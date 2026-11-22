@@ -176,14 +176,14 @@ class WorkerSubsystemTests(unittest.TestCase):
             iv_past = repo.create({
                 "company": "Past Corp",
                 "role_title": "Backend Dev",
-                "scheduled_at": "2026-11-10T10:00",
+                "scheduled_at": "2020-01-01T10:00",
                 "duration_minutes": 45,
                 "status": "upcoming",
             })
             iv_future = repo.create({
                 "company": "Future Corp",
                 "role_title": "Lead Architect",
-                "scheduled_at": "2026-11-20T14:00",
+                "scheduled_at": "2099-01-01T14:00",
                 "duration_minutes": 60,
                 "status": "upcoming",
             })
@@ -368,7 +368,7 @@ class WorkerSubsystemTests(unittest.TestCase):
             a_fresh = repo.create({
                 "job_title": "Fresh Sugg",
                 "source_app": "Wellfound",
-                "received_at": "2026-11-16T10:00:00Z",
+                "received_at": datetime.now(timezone.utc).isoformat(),
                 "status": "suggested",
             })
             old_sugg_id = a_old_sugg.id

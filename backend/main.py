@@ -1,6 +1,5 @@
 """FastAPI application factory, lifecycle wiring, and Uvicorn entrypoint."""
 
-import logging
 import os
 import sys
 from contextlib import asynccontextmanager
@@ -12,6 +11,7 @@ if _PROJECT_ROOT not in sys.path:
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.api.deps import DEFAULT_APP_CONTEXT, AppContext, get_app_context
@@ -30,7 +30,22 @@ def create_app(context: AppContext | None = None) -> FastAPI:
         app_ctx.db.init_schema()
         yield
 
-    application = FastAPI(title="Job Tracker API", lifespan=lifespan)
+    application = FastAPI(title="JobHQ API", lifespan=lifespan)
+    # Enable CORS for Tauri desktop webview custom protocol origins and local dev servers
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://tauri.localhost",
+            "https://tauri.localhost",
+            "tauri://localhost",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        allow_private_network=True,
+    )
     if context is not None:
         application.dependency_overrides[get_app_context] = lambda: app_ctx
 

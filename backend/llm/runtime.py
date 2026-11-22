@@ -6,7 +6,7 @@ import os
 import threading
 from typing import Protocol
 
-from backend.llm.downloader import list_downloaded_models
+from backend.llm.downloader import list_downloaded_models, resolve_model_path
 from backend.llm.prompts import SlmPromptBuilder, extract_json_object
 
 logger = logging.getLogger("job_tracker.llm")
@@ -41,7 +41,7 @@ class LlamaCppPythonAdapter:
     _cached_threads = 0
 
     def __init__(self, model_path: str) -> None:
-        self.model_path = model_path
+        self.model_path = resolve_model_path(model_path)
         self.threads = get_optimal_cpu_threads()
 
     def _get_llm(self):
@@ -152,7 +152,8 @@ def test_llm_engine(backend: str, model_path: str) -> dict:
                     "./install.sh (Mac/Linux), or `uv sync` in the project folder."
                 ),
             }
-        if not model_path or not os.path.isfile(model_path):
+        resolved = resolve_model_path(model_path)
+        if not resolved or not os.path.isfile(resolved):
             return {
                 "ok": False,
                 "backend": "llama_cpp_python",
@@ -165,7 +166,7 @@ def test_llm_engine(backend: str, model_path: str) -> dict:
             "ok": True,
             "backend": "llama_cpp_python",
             "message": (
-                f"Local AI model is ready ({os.path.basename(model_path)}). "
+                f"Local AI model is ready ({os.path.basename(resolved)}). "
                 f"Using {get_optimal_cpu_threads()} CPU threads automatically."
             ),
         }

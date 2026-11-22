@@ -224,7 +224,7 @@ export default function App() {
 
   const syncing = syncJob?.status === 'running';
 
-  const loadAllData = useCallback(async () => {
+  const loadAllData = useCallback(async (retryCount = 0) => {
     try {
       const [dashRes, statsRes, ivRes, alertRes, profRes] = await Promise.all([
         api.getDashboard(),
@@ -246,11 +246,21 @@ export default function App() {
           setShowOnboarding(true);
         }
       }
+      setLoading(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load workspace data.';
+      // Cold-start retry guard: On native desktop startup, the Tauri webview mounts in ~150ms
+      // while the Python sidecar takes ~2-3s to initialize and bind port 3001. We poll every 500ms
+      // (up to 20 attempts / 10s) while retaining the skeleton loader to avoid premature "Failed to fetch" alerts.
+      if (retryCount < 20) {
+        setTimeout(() => {
+          loadAllData(retryCount + 1);
+        }, 500);
+        return;
+      }
+      const errDetail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      const message = `Failed to connect to backend (${errDetail}). Please ensure JobHQ backend is running.`;
       setBanner({ type: 'error', text: message });
-      toast.error('Workspace load failed', message);
-    } finally {
+      toast.error('Workspace load failed', `${errDetail}`);
       setLoading(false);
     }
   }, [onboardingChecked]);

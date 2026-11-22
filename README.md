@@ -47,7 +47,7 @@ Run the one-step installer for your OS:
   install.bat
   ```
 
-*For manual setup via `uv` or custom environment configuration, see the [Setup & Development Guide](docs/SETUP_AND_DEVELOPMENT.md).*
+*For manual setup via `uv` or custom environment configuration, see the [Development & Build Playbook](docs/DEVELOPMENT.md).*
 
 ### 2. Run the App
 
@@ -69,7 +69,7 @@ Run the one-step installer for your OS:
 - **[System Architecture](docs/ARCHITECTURE.md)**: Process topology, unified configuration (`~/.jobhq`), 3-tier backend execution model, and security model.
 - **[Desktop Architecture](docs/DESKTOP_ARCHITECTURE.md)**: Architectural blueprint for the Tauri v2 desktop shell, PyInstaller sidecar, single-pod backend model, and lifecycle hooks.
 - **[Background Worker System](docs/WORKERS.md)**: Multi-process supervisor architecture, desktop interval scheduling, worker catalog, and REST controls.
-- **[Setup & Development Guide](docs/SETUP_AND_DEVELOPMENT.md)**: Installation options, email provider App Password guides, environment overrides, and verification test commands.
+- **[Development Playbook](docs/DEVELOPMENT.md)**: Installation options, email provider App Password guides, execution modes, desktop build pipelines, and verification test commands.
 
 ---
 

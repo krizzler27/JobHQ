@@ -87,8 +87,19 @@ const splitFolders = (raw: string): string[] =>
     .map((s) => s.trim())
     .filter(Boolean);
 
+export interface ImapDraft {
+  provider: ImapProvider;
+  host: string;
+  port: number;
+  email: string;
+  password?: string;
+  folder: string;
+}
+
 interface ImapFormFieldsProps {
   initialStatus?: ImapStatus | null;
+  draft?: ImapDraft;
+  onDraftChange?: (draft: ImapDraft) => void;
   presets?: Record<ImapProvider, ImapPreset>;
   onConnected: (status: ImapStatus, mailboxMessages: number) => void;
   submitLabel?: string;
@@ -96,16 +107,24 @@ interface ImapFormFieldsProps {
 
 export const ImapConnectionForm: React.FC<ImapFormFieldsProps> = ({
   initialStatus,
+  draft,
+  onDraftChange,
   presets = DEFAULT_PRESETS,
   onConnected,
   submitLabel = 'Test & Save',
 }) => {
-  const [provider, setProvider] = useState<ImapProvider>(initialStatus?.provider || 'gmail');
-  const [host, setHost] = useState(initialStatus?.host || 'imap.gmail.com');
-  const [port, setPort] = useState(initialStatus?.port || 993);
-  const [email, setEmail] = useState(initialStatus?.email || '');
-  const [password, setPassword] = useState('');
-  const [folderInput, setFolderInput] = useState(initialStatus?.folder || 'INBOX');
+  const [provider, setProvider] = useState<ImapProvider>(
+    draft?.provider || initialStatus?.provider || 'gmail',
+  );
+  const [host, setHost] = useState(
+    draft?.host || initialStatus?.host || 'imap.gmail.com',
+  );
+  const [port, setPort] = useState(draft?.port || initialStatus?.port || 993);
+  const [email, setEmail] = useState(draft?.email || initialStatus?.email || '');
+  const [password, setPassword] = useState(draft?.password || '');
+  const [folderInput, setFolderInput] = useState(
+    draft?.folder || initialStatus?.folder || 'INBOX',
+  );
   const [availableFolders, setAvailableFolders] = useState<string[]>([]);
   const [loadingFolders, setLoadingFolders] = useState(false);
   const [showPasswordGuide, setShowPasswordGuide] = useState(false);
@@ -115,7 +134,20 @@ export const ImapConnectionForm: React.FC<ImapFormFieldsProps> = ({
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    if (initialStatus) {
+    if (onDraftChange) {
+      onDraftChange({
+        provider,
+        host,
+        port,
+        email,
+        password,
+        folder: folderInput,
+      });
+    }
+  }, [provider, host, port, email, password, folderInput, onDraftChange]);
+
+  useEffect(() => {
+    if (initialStatus && !draft) {
       const nextProvider = initialStatus.provider || 'gmail';
       setProvider(nextProvider);
       setHost(initialStatus.host || presets[nextProvider].host);
@@ -124,7 +156,7 @@ export const ImapConnectionForm: React.FC<ImapFormFieldsProps> = ({
       setFolderInput(initialStatus.folder || 'INBOX');
       if (nextProvider === 'custom') setShowAdvanced(true);
     }
-  }, [initialStatus, presets]);
+  }, [initialStatus, presets, draft]);
 
   const handleSelectProvider = (next: ImapProvider) => {
     setProvider(next);

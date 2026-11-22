@@ -3,7 +3,7 @@ import { ArrowRight, Clock, Cpu, Filter, Mail, RotateCcw, SlidersHorizontal } fr
 import { api } from '../api';
 import type { ImapStatus, LlmBackend, ProfileSettings } from '../types';
 import { EmailReaderPanel } from './EmailReaderPanel';
-import { ImapConnectionForm } from './ImapModal';
+import { ImapConnectionForm, type ImapDraft } from './ImapModal';
 import { AutoSyncScheduleEditor, FilterKeywordEditor } from './ProfileSettingsView';
 
 interface OnboardingWizardProps {
@@ -28,6 +28,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   onSkip,
 }) => {
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [currentImapStatus, setCurrentImapStatus] = useState<ImapStatus | null>(imapStatus);
+  const [imapDraft, setImapDraft] = useState<ImapDraft | undefined>(undefined);
   const [targetTitles, setTargetTitles] = useState('');
   const [keywords, setKeywords] = useState('');
   const [excluded, setExcluded] = useState('');
@@ -42,6 +44,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [saving, setSaving] = useState(false);
   const [resettingFilters, setResettingFilters] = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  useEffect(() => {
+    if (imapStatus) {
+      setCurrentImapStatus(imapStatus);
+    }
+  }, [imapStatus]);
 
   useEffect(() => {
     if (!open || !profile) return;
@@ -206,9 +214,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           {step === 1 && (
             <div className="space-y-4">
               <ImapConnectionForm
-                initialStatus={imapStatus}
+                initialStatus={currentImapStatus}
+                draft={imapDraft}
+                onDraftChange={setImapDraft}
                 submitLabel="Test & Continue"
-                onConnected={() => setStep(2)}
+                onConnected={(newStatus) => {
+                  setCurrentImapStatus(newStatus);
+                  setStep(2);
+                }}
               />
               <div className="pt-2 border-t border-slate-100 flex justify-between items-center">
                 <span className="text-xs text-slate-500">
