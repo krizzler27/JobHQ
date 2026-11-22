@@ -1,5 +1,6 @@
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use tauri::menu::{Menu, MenuItem};
 use tauri::path::BaseDirectory;
@@ -11,23 +12,54 @@ use std::os::windows::process::CommandExt;
 
 fn log_sidecar_event(line: &str) {
   eprintln!("{}", line);
-  if let Ok(userprofile) = std::env::var("USERPROFILE") {
-    let log_path = std::path::Path::new(&userprofile)
+  let home_opt = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME"));
+  if let Ok(home) = home_opt {
+    let log_path = std::path::Path::new(&home)
       .join(".jobhq")
       .join("logs")
       .join("rust-sidecar.log");
+
+    // Simple rotation / size limit: If log exceeds 5MB, truncate it
+    if let Ok(meta) = std::fs::metadata(&log_path) {
+      if meta.len() > 5 * 1024 * 1024 {
+        let _ = std::fs::remove_file(&log_path);
+      }
+    }
+
     if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(log_path) {
       let now = chrono_lite_now();
-      let _ = writeln!(file, "{} {}", now, line);
+      let _ = writeln!(file, "[{}] {}", now, line);
     }
   }
 }
 
 fn chrono_lite_now() -> String {
-  let d = std::time::SystemTime::now()
-    .duration_since(std::time::UNIX_EPOCH)
-    .unwrap_or_default();
-  format!("[+{}s]", d.as_secs())
+  let datetime = ChronoDatetimeApprox::now();
+  datetime.format()
+}
+
+struct ChronoDatetimeApprox {
+  formatted: String,
+}
+
+impl ChronoDatetimeApprox {
+  fn now() -> Self {
+    let d = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .unwrap_or_default();
+    let secs = d.as_secs();
+    // Format timestamp string without heavy chrono dependency
+    let s = secs % 60;
+    let m = (secs / 60) % 60;
+    let h = (secs / 3600) % 24;
+    Self {
+      formatted: format!("{:02}:{:02}:{:02} UTC", h, m, s),
+    }
+  }
+
+  fn format(&self) -> String {
+    self.formatted.clone()
+  }
 }
 
 #[derive(Clone, Default)]
@@ -39,24 +71,23 @@ impl SidecarState {
       if let Some(mut child) = guard.take() {
         let pid = child.id();
         log_sidecar_event(&format!(
-          "[rust-sidecar] Terminating sidecar process tree for PID {} (reason: {})...",
+          "Terminating sidecar process PID {} (reason: {})...",
           pid, reason
         ));
+
+        // In onedir mode, child is directly the Python process.
+        // Attempt clean termination via child.kill() followed by wait().
+        let _ = child.kill();
+        let _ = child.wait();
+
         #[cfg(target_os = "windows")]
         {
-          let _ = std::process::Command::new("taskkill")
-            .args(["/F", "/T", "/PID", &pid.to_string()])
-            .status();
+          // Defensive cleanup fallback in case native child.kill() leaves conhost or threads
+          let mut check_cmd = std::process::Command::new("taskkill");
+          check_cmd.args(["/F", "/PID", &pid.to_string()]);
+          check_cmd.creation_flags(0x08000000);
+          let _ = check_cmd.status();
         }
-        #[cfg(not(target_os = "windows"))]
-        {
-          let _ = child.kill();
-        }
-      } else {
-        log_sidecar_event(&format!(
-          "[rust-sidecar] terminate() called with reason '{}' but no active child found",
-          reason
-        ));
       }
     }
   }
@@ -84,11 +115,19 @@ pub fn run() {
       let resource_dir = app.path().resolve("jobhq-backend", BaseDirectory::Resource);
       match resource_dir {
         Ok(dir) => {
-          let exe_path = dir.join("jobhq-backend.exe");
-          log_sidecar_event(&format!("[rust-sidecar] Resolving backend at {:?}", exe_path));
+          #[cfg(target_os = "windows")]
+          let exe_name = "jobhq-backend.exe";
+          #[cfg(not(target_os = "windows"))]
+          let exe_name = "jobhq-backend";
+
+          let exe_path = dir.join(exe_name);
+          log_sidecar_event(&format!("Resolving backend at {:?}", exe_path));
           
           let mut cmd = std::process::Command::new(&exe_path);
           cmd.current_dir(&dir);
+          cmd.stdin(Stdio::null());
+          cmd.stdout(Stdio::null());
+          cmd.stderr(Stdio::null());
 
           #[cfg(target_os = "windows")]
           {
@@ -98,10 +137,7 @@ pub fn run() {
           match cmd.spawn() {
             Ok(child) => {
               let pid = child.id();
-              log_sidecar_event(&format!(
-                "[rust-sidecar] Successfully spawned onedir backend (PID {})",
-                pid
-              ));
+              log_sidecar_event(&format!("Successfully spawned onedir backend (PID {})", pid));
 
               if let Some(state) = app.try_state::<SidecarState>() {
                 if let Ok(mut guard) = state.0.lock() {
@@ -110,12 +146,12 @@ pub fn run() {
               }
             }
             Err(e) => {
-              log_sidecar_event(&format!("[rust-sidecar] Failed to spawn backend at {:?}: {}", exe_path, e));
+              log_sidecar_event(&format!("Failed to spawn backend at {:?}: {}", exe_path, e));
             }
           }
         }
         Err(e) => {
-          log_sidecar_event(&format!("[rust-sidecar] Failed to resolve resource directory: {}", e));
+          log_sidecar_event(&format!("Failed to resolve resource directory: {}", e));
         }
       }
 
@@ -190,25 +226,8 @@ pub fn run() {
     .build(tauri::generate_context!())
     .expect("error while building tauri application")
     .run(move |_app_handle, event| {
-      match &event {
-        tauri::RunEvent::Exit => {
-          sidecar_state.terminate("tauri_runevent_exit");
-        }
-        tauri::RunEvent::ExitRequested { code, .. } => {
-          log_sidecar_event(&format!("[rust-sidecar] RunEvent::ExitRequested fired (code: {:?})", code));
-        }
-        tauri::RunEvent::WindowEvent { label, event: win_event, .. } => {
-          match win_event {
-            tauri::WindowEvent::CloseRequested { .. } => {
-              log_sidecar_event(&format!("[rust-sidecar] Window '{}' CloseRequested", label));
-            }
-            tauri::WindowEvent::Destroyed => {
-              log_sidecar_event(&format!("[rust-sidecar] Window '{}' Destroyed", label));
-            }
-            _ => {}
-          }
-        }
-        _ => {}
+      if let tauri::RunEvent::Exit = event {
+        sidecar_state.terminate("tauri_runevent_exit");
       }
     });
 }
