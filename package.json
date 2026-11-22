@@ -19,7 +19,6 @@
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "3.0.0-alpha.3",
     "@tauri-apps/plugin-notification": "3.0.0-alpha.3",
-    "@tauri-apps/plugin-shell": "3.0.0-alpha.3",
     "@vitejs/plugin-react": "^6.1.1",
     "express": "^4.21.2",
     "lucide-react": "^0.546.0",

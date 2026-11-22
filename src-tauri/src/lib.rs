@@ -108,7 +108,6 @@ pub fn run() {
       }
     }))
     .setup(|app| {
-      app.handle().plugin(tauri_plugin_shell::init())?;
       app.handle().plugin(tauri_plugin_notification::init())?;
 
       // Launch backend process from bundled resources
