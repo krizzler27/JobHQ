@@ -12,7 +12,7 @@
  * running desktop window context to confirm the Python backend responds with 200 OK.
  */
 
-const http = require('http');
+import http from 'node:http';
 
 http.get('http://127.0.0.1:9222/json', (res) => {
   let data = '';
