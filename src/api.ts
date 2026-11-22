@@ -40,8 +40,36 @@ export interface AlertConvertPayload {
   existing_app_id?: number;
 }
 
+export function isTauriEnvironment(): boolean {
+  if (typeof window === 'undefined') return false;
+  const loc = window.location;
+  return (
+    loc.protocol === 'tauri:' ||
+    loc.hostname === 'tauri.localhost' ||
+    '__TAURI_INTERNALS__' in window ||
+    '__TAURI__' in window
+  );
+}
+
+// Detect whether frontend is running inside Tauri WebView (by protocol/host or Tauri internals)
+export function getApiBase(): string {
+  if (isTauriEnvironment()) {
+    return 'http://127.0.0.1:3001';
+  }
+  return '';
+}
+
+export const API_BASE = getApiBase();
+
+function resolveApiUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  const base = getApiBase();
+  return `${base}${path}`;
+}
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const fullUrl = resolveApiUrl(url);
+  const res = await fetch(fullUrl, init);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error(data?.error || data?.detail || `Request failed (${res.status})`) as Error & {
@@ -305,7 +333,8 @@ export const api = {
   },
 
   downloadBackupFile: async (kind: 'json' | 'sqlite') => {
-    const url = kind === 'json' ? '/api/backup/export' : '/api/backup/sqlite';
+    const rawUrl = kind === 'json' ? '/api/backup/export' : '/api/backup/sqlite';
+    const url = resolveApiUrl(rawUrl);
     const res = await fetch(url);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));

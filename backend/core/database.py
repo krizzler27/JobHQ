@@ -56,8 +56,9 @@ class DatabaseManager:
         )
 
     def init_schema(self) -> None:
-        Base.metadata.create_all(self.engine)
-        self._ensure_indexes()
+        if getattr(self, "_schema_initialized", False):
+            return
+        Base.metadata.create_all(self.engine, checkfirst=True)
         with self.session_scope() as session:
             if not session.get(ProfileSettings, 1):
                 session.add(
@@ -70,32 +71,16 @@ class DatabaseManager:
                 )
             if not session.get(ImapConfig, 1):
                 session.add(ImapConfig(id=1, updated_at=now_iso()))
-
-    def _ensure_indexes(self) -> None:
-        index_ddls = (
-            "CREATE INDEX IF NOT EXISTS ix_applications_status ON applications (status)",
-            "CREATE INDEX IF NOT EXISTS ix_applications_thread_id ON applications (thread_id)",
-            "CREATE INDEX IF NOT EXISTS ix_applications_updated_at ON applications (updated_at)",
-            "CREATE INDEX IF NOT EXISTS ix_interviews_scheduled_at ON interviews (scheduled_at)",
-            "CREATE INDEX IF NOT EXISTS ix_interviews_status ON interviews (status)",
-            "CREATE INDEX IF NOT EXISTS ix_interviews_source_message_id ON interviews (source_message_id)",
-            "CREATE INDEX IF NOT EXISTS ix_job_alerts_source_app ON job_alerts (source_app)",
-            "CREATE INDEX IF NOT EXISTS ix_job_alerts_relevance_score ON job_alerts (relevance_score)",
-            "CREATE INDEX IF NOT EXISTS ix_job_alerts_status ON job_alerts (status)",
-            "CREATE INDEX IF NOT EXISTS ix_job_alerts_source_message_id ON job_alerts (source_message_id)",
-            "CREATE INDEX IF NOT EXISTS ix_processed_emails_category ON processed_emails (category)",
-            "CREATE INDEX IF NOT EXISTS ix_processed_emails_processed_at ON processed_emails (processed_at)",
-        )
-        with self.engine.begin() as conn:
-            for ddl in index_ddls:
-                conn.execute(text(ddl))
+        self._schema_initialized = True
 
     def _ensure_file_ready(self) -> None:
-        if not self._is_memory and self._db_file and not os.path.exists(self._db_file):
-            os.makedirs(os.path.dirname(self._db_file), exist_ok=True)
-            self.engine.dispose()
-            Base.metadata.create_all(self.engine)
-            self._ensure_indexes()
+        if not self._is_memory and self._db_file:
+            db_dir = os.path.dirname(self._db_file)
+            if db_dir and not os.path.exists(db_dir):
+                try:
+                    os.makedirs(db_dir, exist_ok=True)
+                except OSError:
+                    pass
 
     @contextmanager
     def session_scope(self) -> Iterator[Session]:

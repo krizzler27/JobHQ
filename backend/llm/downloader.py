@@ -13,6 +13,29 @@ def get_models_dir() -> str:
     return str(config.models_dir)
 
 
+def resolve_model_path(path_or_filename: str) -> str:
+    """Resolves a model path, checking absolute paths, ~/.jobhq/models/, and legacy ./models/."""
+    if not path_or_filename:
+        return ""
+    # 1. Direct absolute path or valid relative path
+    if os.path.isfile(path_or_filename):
+        return os.path.abspath(path_or_filename)
+    
+    # 2. Check ~/.jobhq/models/ (config.models_dir)
+    models_dir = get_models_dir()
+    clean_filename = os.path.basename(path_or_filename)
+    home_model_path = os.path.join(models_dir, clean_filename)
+    if os.path.isfile(home_model_path):
+        return home_model_path
+
+    # 3. Check legacy ./models/ in cwd
+    cwd_model_path = os.path.join(os.getcwd(), "models", clean_filename)
+    if os.path.isfile(cwd_model_path):
+        return cwd_model_path
+
+    return home_model_path
+
+
 def list_downloaded_models() -> list[dict]:
     models_dir = get_models_dir()
     if not os.path.isdir(models_dir):
@@ -26,7 +49,7 @@ def list_downloaded_models() -> list[dict]:
                 found.append(
                     {
                         "filename": entry,
-                        "path": f"./models/{entry}",
+                        "path": full,
                         "size_mb": size_mb,
                     }
                 )
@@ -66,17 +89,16 @@ class ModelDownloadManager:
         models_dir = get_models_dir()
         os.makedirs(models_dir, exist_ok=True)
         final_path = os.path.join(models_dir, spec["filename"])
-        rel_path = f"./models/{spec['filename']}"
 
         if os.path.isfile(final_path) and os.path.getsize(final_path) > 10_000_000:
             if on_complete:
-                on_complete(rel_path)
+                on_complete(final_path)
             with self._lock:
                 self._state = {
                     "status": "completed",
                     "model_id": model_id,
                     "filename": spec["filename"],
-                    "path": rel_path,
+                    "path": final_path,
                     "downloaded_mb": round(os.path.getsize(final_path) / (1024 * 1024), 1),
                     "total_mb": round(os.path.getsize(final_path) / (1024 * 1024), 1),
                     "percent": 100,
@@ -91,7 +113,7 @@ class ModelDownloadManager:
                 "status": "downloading",
                 "model_id": model_id,
                 "filename": spec["filename"],
-                "path": rel_path,
+                "path": final_path,
                 "downloaded_mb": 0.0,
                 "total_mb": 0.0,
                 "percent": 0,
@@ -100,7 +122,7 @@ class ModelDownloadManager:
 
         thread = threading.Thread(
             target=self._run_download,
-            args=(spec, final_path, rel_path, on_complete),
+            args=(spec, final_path, on_complete),
             daemon=True,
         )
         thread.start()
@@ -110,7 +132,6 @@ class ModelDownloadManager:
         self,
         spec: dict,
         final_path: str,
-        rel_path: str,
         on_complete: Callable[[str], None] | None,
     ) -> None:
         part_path = f"{final_path}.part"
@@ -141,7 +162,7 @@ class ModelDownloadManager:
 
             os.replace(part_path, final_path)
             if on_complete:
-                on_complete(rel_path)
+                on_complete(final_path)
             with self._lock:
                 self._state["status"] = "completed"
                 self._state["percent"] = 100

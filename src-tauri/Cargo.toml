@@ -14,6 +14,9 @@ rust-version = "1.95"
 name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+devtools = ["tauri/devtools"]
+
 [build-dependencies]
 tauri-build = { version = "3.0.0-alpha.4", features = [] }
 
@@ -25,4 +28,4 @@ tauri = { version = "3.0.0-alpha.6", features = ["tray-icon"] }
 tauri-runtime-wry = { version = "3.0.0-alpha.6" }
 tauri-plugin-log = "3.0.0-alpha.1"
 tauri-plugin-notification = "3.0.0-alpha.2"
-tauri-plugin-shell = "3.0.0-alpha.2"
+tauri-plugin-single-instance = "3.0.0-alpha.2"

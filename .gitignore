@@ -1,6 +1,8 @@
 node_modules/
 build/
 dist/
+dist_backend/
+src-tauri/target/
 coverage/
 .DS_Store
 *.log
@@ -16,4 +18,3 @@ __pycache__/
 metadata.json
 bun.lock
 promo/
-brag-output*/

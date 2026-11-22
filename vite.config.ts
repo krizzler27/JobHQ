@@ -5,6 +5,8 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    // Relative base is required for Tauri webview custom protocol loading (tauri://localhost)
+    base: './',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

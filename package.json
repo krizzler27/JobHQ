@@ -13,13 +13,12 @@
     "test": "tsx --test src/**/*.test.ts",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "desktop:build": "build-desktop.bat"
+    "desktop:build": ".venv\\Scripts\\python.exe -m PyInstaller jobhq_backend.spec --noconfirm --distpath dist_backend && tauri build"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "3.0.0-alpha.3",
     "@tauri-apps/plugin-notification": "3.0.0-alpha.3",
-    "@tauri-apps/plugin-shell": "3.0.0-alpha.3",
     "@vitejs/plugin-react": "^6.1.1",
     "express": "^4.21.2",
     "lucide-react": "^0.546.0",
