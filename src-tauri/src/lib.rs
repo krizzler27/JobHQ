@@ -172,7 +172,6 @@ pub fn run() {
       // Fallback safety: If frontend doesn't invoke window.show() within 3s,
       // reveal the window so the app is never left hidden if a script fails.
       if let Some(main_win) = app.get_webview_window("main") {
-        let _ = main_win.open_devtools();
         let win = main_win.clone();
         std::thread::spawn(move || {
           std::thread::sleep(std::time::Duration::from_millis(3000));
