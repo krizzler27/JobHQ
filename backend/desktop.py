@@ -53,6 +53,8 @@ def main() -> None:
         u_logger.propagate = False
 
     ctx = get_app_context()
+    # Initialize schema once at startup before starting worker thread or uvicorn
+    ctx.db.init_schema()
     
     # Initialize background worker runner with default registered workers
     workers = get_default_workers(db=ctx.db, sync_jobs=ctx.sync_job_manager)
