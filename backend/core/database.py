@@ -56,6 +56,8 @@ class DatabaseManager:
         )
 
     def init_schema(self) -> None:
+        if getattr(self, "_schema_initialized", False):
+            return
         Base.metadata.create_all(self.engine, checkfirst=True)
         with self.session_scope() as session:
             if not session.get(ProfileSettings, 1):
@@ -69,6 +71,7 @@ class DatabaseManager:
                 )
             if not session.get(ImapConfig, 1):
                 session.add(ImapConfig(id=1, updated_at=now_iso()))
+        self._schema_initialized = True
 
     def _ensure_file_ready(self) -> None:
         if not self._is_memory and self._db_file:
@@ -78,9 +81,6 @@ class DatabaseManager:
                     os.makedirs(db_dir, exist_ok=True)
                 except OSError:
                     pass
-            if not os.path.exists(self._db_file):
-                self.engine.dispose()
-                Base.metadata.create_all(self.engine, checkfirst=True)
 
     @contextmanager
     def session_scope(self) -> Iterator[Session]:
