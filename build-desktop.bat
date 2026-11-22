@@ -38,21 +38,9 @@ if errorlevel 1 (
 REM 3. Package Python Sidecar
 echo.
 echo [2/4] Packaging Python Desktop Sidecar via PyInstaller...
-.venv\Scripts\pyinstaller.exe jobhq_backend.spec --noconfirm
+.venv\Scripts\pyinstaller.exe jobhq_backend.spec --noconfirm --distpath dist_backend
 if errorlevel 1 (
     echo [ERROR] PyInstaller failed to build sidecar executable.
-    exit /b 1
-)
-
-REM Ensure destination directory exists
-if not exist "src-tauri\binaries" (
-    mkdir "src-tauri\binaries"
-)
-
-REM Copy built binary to Tauri expected sidecar target name
-copy /Y "dist\jobhq-backend-x86_64-pc-windows-msvc.exe" "src-tauri\binaries\jobhq-backend-x86_64-pc-windows-msvc.exe"
-if errorlevel 1 (
-    echo [ERROR] Failed to copy sidecar binary to src-tauri\binaries.
     exit /b 1
 )
 

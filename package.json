@@ -13,7 +13,7 @@
     "test": "tsx --test src/**/*.test.ts",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "desktop:build": "build-desktop.bat"
+    "desktop:build": "python -m PyInstaller jobhq_backend.spec --noconfirm --distpath dist_backend && tauri build"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
