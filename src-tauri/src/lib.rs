@@ -8,7 +8,78 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::Manager;
 
 #[cfg(target_os = "windows")]
+use std::os::windows::io::AsRawHandle;
+#[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
+
+#[cfg(target_os = "windows")]
+struct JobHandle(windows_sys::Win32::Foundation::HANDLE);
+
+#[cfg(target_os = "windows")]
+unsafe impl Send for JobHandle {}
+#[cfg(target_os = "windows")]
+unsafe impl Sync for JobHandle {}
+
+#[cfg(target_os = "windows")]
+impl Drop for JobHandle {
+  fn drop(&mut self) {
+    if !self.0.is_null() && self.0 != -1isize as _ {
+      unsafe {
+        windows_sys::Win32::Foundation::CloseHandle(self.0);
+      }
+    }
+  }
+}
+
+#[cfg(target_os = "windows")]
+fn create_kill_on_close_job() -> Result<JobHandle, String> {
+  use std::mem::size_of;
+  use windows_sys::Win32::Foundation::GetLastError;
+  use windows_sys::Win32::System::JobObjects::{
+    CreateJobObjectW, JobObjectExtendedLimitInformation, SetInformationJobObject,
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+  };
+
+  unsafe {
+    let job = CreateJobObjectW(std::ptr::null(), std::ptr::null());
+    if job.is_null() || job == -1isize as _ {
+      return Err(format!("CreateJobObjectW failed with error code {}", GetLastError()));
+    }
+
+    let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = std::mem::zeroed();
+    info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+
+    let ret = SetInformationJobObject(
+      job,
+      JobObjectExtendedLimitInformation,
+      &info as *const _ as *const _,
+      size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+    );
+
+    if ret == 0 {
+      let err = GetLastError();
+      windows_sys::Win32::Foundation::CloseHandle(job);
+      return Err(format!("SetInformationJobObject failed with error code {}", err));
+    }
+
+    Ok(JobHandle(job))
+  }
+}
+
+#[cfg(target_os = "windows")]
+fn assign_process_to_job(job: &JobHandle, child: &std::process::Child) -> Result<(), String> {
+  use windows_sys::Win32::Foundation::GetLastError;
+  use windows_sys::Win32::System::JobObjects::AssignProcessToJobObject;
+
+  let raw_handle = child.as_raw_handle() as windows_sys::Win32::Foundation::HANDLE;
+  unsafe {
+    let ret = AssignProcessToJobObject(job.0, raw_handle);
+    if ret == 0 {
+      return Err(format!("AssignProcessToJobObject failed with error code {}", GetLastError()));
+    }
+  }
+  Ok(())
+}
 
 fn log_sidecar_event(line: &str) {
   eprintln!("{}", line);
@@ -63,11 +134,15 @@ impl ChronoDatetimeApprox {
 }
 
 #[derive(Clone, Default)]
-struct SidecarState(Arc<Mutex<Option<std::process::Child>>>);
+struct SidecarState {
+  child: Arc<Mutex<Option<std::process::Child>>>,
+  #[cfg(target_os = "windows")]
+  _job: Arc<Mutex<Option<JobHandle>>>,
+}
 
 impl SidecarState {
   fn terminate(&self, reason: &str) {
-    if let Ok(mut guard) = self.0.lock() {
+    if let Ok(mut guard) = self.child.lock() {
       if let Some(mut child) = guard.take() {
         let pid = child.id();
         log_sidecar_event(&format!(
@@ -138,9 +213,40 @@ pub fn run() {
               let pid = child.id();
               log_sidecar_event(&format!("Successfully spawned onedir backend (PID {})", pid));
 
+              #[cfg(target_os = "windows")]
+              let job_handle = match create_kill_on_close_job() {
+                Ok(job) => {
+                  if let Err(e) = assign_process_to_job(&job, &child) {
+                    log_sidecar_event(&format!(
+                      "Warning: Failed to assign sidecar PID {} to Job Object: {}",
+                      pid, e
+                    ));
+                  } else {
+                    log_sidecar_event(&format!(
+                      "Successfully assigned sidecar PID {} to Job Object (KILL_ON_JOB_CLOSE)",
+                      pid
+                    ));
+                  }
+                  Some(job)
+                }
+                Err(e) => {
+                  log_sidecar_event(&format!(
+                    "Warning: Failed to create Job Object with KILL_ON_JOB_CLOSE: {}",
+                    e
+                  ));
+                  None
+                }
+              };
+
               if let Some(state) = app.try_state::<SidecarState>() {
-                if let Ok(mut guard) = state.0.lock() {
+                if let Ok(mut guard) = state.child.lock() {
                   *guard = Some(child);
+                }
+                #[cfg(target_os = "windows")]
+                if let Some(job) = job_handle {
+                  if let Ok(mut guard) = state._job.lock() {
+                    *guard = Some(job);
+                  }
                 }
               }
             }

@@ -29,3 +29,10 @@ tauri-runtime-wry = { version = "3.0.0-alpha.6" }
 tauri-plugin-log = "3.0.0-alpha.1"
 tauri-plugin-notification = "3.0.0-alpha.2"
 tauri-plugin-single-instance = "3.0.0-alpha.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_JobObjects",
+] }
+

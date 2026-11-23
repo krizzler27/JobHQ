@@ -125,9 +125,9 @@ Release builds do not ship with DevTools enabled. To verify or inspect a package
 1. **Cross-Platform Compilation**:
    - PyInstaller distributions are OS-specific. Building for macOS or Linux requires running PyInstaller and Tauri build on their respective operating systems.
    - The Rust sidecar spawn code uses `#[cfg(target_os = "windows")]` conditionals for Windows-specific flags (`CREATE_NO_WINDOW`, `.exe` extension) and falls back to standard POSIX conventions for macOS and Linux.
-2. **Orphan Process Protection (Follow-up)**:
-   - If the main Tauri application is killed forcibly (`SIGKILL` or Task Manager "End Task"), the sidecar process could potentially remain running on port 3001.
-   - *Recommended Follow-up*: Associate the spawned process with a Windows Job Object configured with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, or implement a parent-heartbeat/death-watcher in the backend sidecar.
+2. **Orphan Process Protection**:
+   - **Windows (Fixed)**: On Windows, the spawned backend sidecar process is assigned to an NT Job Object configured with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` immediately after spawn. If `app.exe` crashes, terminates abnormally, or is force-killed (e.g., via Task Manager "End Task" or `taskkill /F`), the Windows kernel automatically terminates all processes in the job object immediately, preventing orphaned `jobhq-backend.exe` processes and freeing port 3001. The job handle is retained in managed `SidecarState` for the app's lifetime.
+   - **macOS & Linux (Not Handled Yet)**: On POSIX systems, a process killed abruptly (e.g. `SIGKILL`) does not execute user-space cleanup and orphans child processes, reparenting them to init/systemd. Options for follow-up include using `PR_SET_PDEATHSIG` on Linux, or implementing a stdin-EOF watcher in the backend sidecar that terminates the server when the parent closes the piped stdin handle (which works across both macOS and Linux).
 3. **Database Schema Migrations (Follow-up)**:
    - Currently, schema initialization relies on `Base.metadata.create_all(..., checkfirst=True)` which is idempotent and safe for existing tables.
    - Before public releases with evolving database schemas, integrate an automated migration tool (such as Alembic) for non-additive column alterations.
